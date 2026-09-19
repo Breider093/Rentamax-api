@@ -1,0 +1,502 @@
+@startuml diagrama-entidad-relacion
+
+!theme plain
+hide methods
+hide stereotypes
+skinparam linetype ortho
+skinparam entity {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #475569
+}
+skinparam package {
+  BackgroundColor #F1F5F9
+  BorderColor #94A3B8
+}
+
+legend right
+  **Diagrama ER del backend Django**
+  PK = clave primaria
+  FK = clave foránea
+  UK = valor único
+endlegend
+
+package "Clientes y obras" {
+  entity "clientes" as Cliente {
+    * id : bigint <<PK>>
+    --
+    * documento : varchar <<UK>>
+    * razon_social : varchar
+    tipo_documento : varchar
+    direccion : varchar
+    ciudad : varchar
+    email : varchar
+    telefono : varchar
+    celular : varchar
+    habilitado : boolean
+  }
+
+  entity "cliente_documentos" as ClienteDocumento {
+    * id : bigint <<PK>>
+    --
+    * cliente_id : bigint <<FK>>
+    * tipo : varchar
+    * archivo : file
+  }
+
+  entity "obras" as Obra {
+    * id : bigint <<PK>>
+    --
+    * cliente_id : bigint <<FK>>
+    * nombre : varchar
+    direccion : varchar
+    telefono : varchar
+    estado : varchar
+  }
+}
+
+package "Seguridad" {
+  entity "auth_user" as Usuario {
+    * id : bigint <<PK>>
+    --
+    username : varchar <<UK>>
+    email : varchar
+    is_active : boolean
+  }
+}
+
+package "Catálogo" {
+  entity "tipo_producto" as TipoProducto {
+    * id : bigint <<PK>>
+    --
+    * nombre : varchar <<UK>>
+  }
+
+  entity "producto" as Producto {
+    * id : bigint <<PK>>
+    --
+    * tipo_producto_id : bigint <<FK>>
+    descripcion : varchar
+    peso_kg : decimal
+    precio_alquiler : decimal
+    precio_reposicion : decimal
+  }
+
+  entity "proveedor" as Proveedor {
+    * id : bigint <<PK>>
+    --
+    nombre : varchar
+    nit : varchar <<UK>>
+    direccion : varchar
+    telefono : varchar
+    email : varchar
+  }
+
+  entity "producto_proveedor" as ProductoProveedor {
+    * id : bigint <<PK>>
+    --
+    * producto_id : bigint <<FK>>
+    * proveedor_id : bigint <<FK>>
+    costo_subarriendo : decimal
+    vinculo_habilitado : boolean
+  }
+}
+
+package "Transporte" {
+  entity "transportadores" as Transportador {
+    * id : bigint <<PK>>
+    --
+    * codigo : varchar <<UK>>
+    * documento : varchar <<UK>>
+    * nombre : varchar
+    telefono : varchar
+    email : varchar
+    licencia_numero : varchar <<UK>>
+    licencia_categoria : varchar
+    licencia_vencimiento : date
+    estado : varchar
+  }
+
+  entity "vehiculos" as Vehiculo {
+    * id : bigint <<PK>>
+    --
+    * placa : varchar <<UK>>
+    * tipo : varchar
+    marca : varchar
+    modelo : varchar
+    capacidad_kg : decimal
+    estado : varchar
+  }
+
+  entity "transportador_vehiculos" as TransportadorVehiculo {
+    * id : bigint <<PK>>
+    --
+    * transportador_id : bigint <<FK>>
+    * vehiculo_id : bigint <<FK>>
+    es_principal : boolean
+    fecha_asignacion : date
+    fecha_desasignacion : date
+  }
+
+  entity "viajes" as Viaje {
+    * id : bigint <<PK>>
+    --
+    * codigo : varchar <<UK>>
+    * transportador_id : bigint <<FK>>
+    vehiculo_id : bigint <<FK>>
+    origen : varchar
+    * destino : varchar
+    pais_destino : varchar
+    * fecha_salida : datetime
+    fecha_llegada_estimada : datetime
+    fecha_llegada_real : datetime
+    estado : varchar
+  }
+
+  entity "viaje_remisiones" as ViajeRemision {
+    * id : bigint <<PK>>
+    --
+    * viaje_id : bigint <<FK>>
+    * remision_id : bigint <<FK>>
+    orden_entrega : integer
+    estado : varchar
+    fecha_entrega_real : datetime
+  }
+}
+
+package "Operación" {
+  entity "cotizaciones" as Cotizacion {
+    * id : bigint <<PK>>
+    --
+    * numero : varchar <<UK>>
+    * cliente_id : bigint <<FK>>
+    * fecha_emision : date
+    vigencia_dias : integer
+    fecha_vencimiento : date
+    estado : varchar
+    observaciones : text
+    subtotal : decimal
+    impuestos : decimal
+    total : decimal
+    creado_por_id : bigint <<FK>>
+  }
+
+  entity "cotizacion_detalles" as CotizacionDetalle {
+    * id : bigint <<PK>>
+    --
+    * cotizacion_id : bigint <<FK>>
+    * producto_id : bigint <<FK>>
+    descripcion : varchar
+    cantidad : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+    iva_linea : decimal
+    total_linea : decimal
+  }
+
+  entity "ordenes_compra" as OrdenCompra {
+    * id : bigint <<PK>>
+    --
+    * numero : varchar <<UK>>
+    * proveedor_id : bigint <<FK>>
+    fecha_emision : date
+    fecha_entrega_programada : date
+    estado : varchar
+    observaciones : text
+    subtotal : decimal
+    impuestos : decimal
+    total : decimal
+    creado_por_id : bigint <<FK>>
+  }
+
+  entity "orden_compra_detalles" as OrdenCompraDetalle {
+    * id : bigint <<PK>>
+    --
+    * orden_compra_id : bigint <<FK>>
+    * producto_id : bigint <<FK>>
+    descripcion : varchar
+    cantidad : decimal
+    cantidad_recibida : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+  }
+
+  entity "entradas" as Entrada {
+    * id : bigint <<PK>>
+    --
+    * numero : varchar <<UK>>
+    * proveedor_id : bigint <<FK>>
+    orden_compra_id : bigint <<FK>>
+    fecha_entrada : date
+    numero_factura : varchar
+    estado : varchar
+    subtotal : decimal
+    total : decimal
+  }
+
+  entity "entrada_detalles" as EntradaDetalle {
+    * id : bigint <<PK>>
+    --
+    * entrada_id : bigint <<FK>>
+    * producto_id : bigint <<FK>>
+    cantidad : decimal
+    precio_unitario : decimal
+    lote : varchar
+    subtotal : decimal
+  }
+
+  entity "inventario" as Inventario {
+    * id : bigint <<PK>>
+    --
+    * producto_id : bigint <<FK, UK>>
+    existencia : decimal
+    actualizado_en : datetime
+  }
+
+  entity "salidas" as Salida {
+    * id : bigint <<PK>>
+    --
+    * numero : varchar <<UK>>
+    fecha : date
+    cliente_id : bigint <<FK>>
+    tipo : varchar
+    responsable_id : bigint <<FK>>
+    estado : varchar
+    observaciones : text
+    subtotal : decimal
+    impuestos : decimal
+    total : decimal
+  }
+
+  entity "salida_detalles" as SalidaDetalle {
+    * id : bigint <<PK>>
+    --
+    * salida_id : bigint <<FK>>
+    * producto_id : bigint <<FK>>
+    cantidad : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+    iva_linea : decimal
+    total_linea : decimal
+  }
+
+  entity "movimientos_inventario" as MovimientoInventario {
+    * id : bigint <<PK>>
+    --
+    * producto_id : bigint <<FK>>
+    * tipo : varchar
+    * cantidad : decimal
+    referencia_tipo : varchar
+    referencia_id : bigint
+    lote : varchar
+    fecha : datetime
+    usuario_id : bigint <<FK>>
+  }
+
+  entity "lotes" as Lote {
+    * id : bigint <<PK>>
+    --
+    * producto_id : bigint <<FK>>
+    * codigo : varchar
+    fecha_vencimiento : date
+    cantidad_disponible : decimal
+  }
+
+  entity "remisiones" as Remision {
+    * id : bigint <<PK>>
+    --
+    * numero : varchar <<UK>>
+    * cliente_id : bigint <<FK>>
+    transportador_id : bigint <<FK>>
+    fecha_emision : date
+    * fecha_entrega_programada : date
+    fecha_entrega_real : date
+    estado : varchar
+    prioridad : varchar
+    subtotal : decimal
+    impuestos : decimal
+    total : decimal
+  }
+
+  entity "remision_detalles" as RemisionDetalle {
+    * id : bigint <<PK>>
+    --
+    * remision_id : bigint <<FK>>
+    * producto_id : bigint <<FK>>
+    descripcion : varchar
+    unidad_medida : varchar
+    cantidad : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+  }
+
+  entity "remision_reservas" as RemisionReserva {
+    * id : bigint <<PK>>
+    --
+    * remision_id : bigint <<FK>>
+    fecha_reserva : date
+    estado : varchar
+    confirmada_at : datetime
+    cancelada_at : datetime
+  }
+
+  entity "remision_alarmas" as RemisionAlarma {
+    * id : bigint <<PK>>
+    --
+    * remision_id : bigint <<FK>>
+    tipo : varchar
+    prioridad : varchar
+    descripcion : text
+    fecha_limite : date
+    estado : varchar
+    resuelta_at : datetime
+  }
+
+  entity "facturas" as Factura {
+    * id : bigint <<PK>>
+    --
+    * numero : varchar <<UK>>
+    cliente_id : bigint <<FK>>
+    remision_id : bigint <<FK, UK>>
+    cotizacion_id : bigint <<FK, UK>>
+    fecha_emision : date
+    estado : varchar
+    subtotal : decimal
+    impuestos : decimal
+    total : decimal
+  }
+
+  entity "factura_detalles" as FacturaDetalle {
+    * id : bigint <<PK>>
+    --
+    * factura_id : bigint <<FK>>
+    * producto_id : bigint <<FK>>
+    descripcion : varchar
+    cantidad : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+  }
+
+  entity "factura_pagos" as FacturaPago {
+    * id : bigint <<PK>>
+    --
+    * factura_id : bigint <<FK>>
+    metodo_pago : varchar
+    monto : decimal
+    fecha_pago : datetime
+    referencia : varchar
+  }
+
+  entity "prestamos" as Prestamo {
+    * id : bigint <<PK>>
+    --
+    * cliente_id : bigint <<FK>>
+    obra_id : bigint <<FK>>
+    fecha_reserva : date
+    fecha_entrega : date
+    estado : varchar
+    total : decimal
+    total_pagado : decimal
+  }
+
+  entity "prestamo_detalles" as PrestamoDetalle {
+    * id : bigint <<PK>>
+    --
+    * prestamo_id : bigint <<FK>>
+    producto_id : bigint <<FK>>
+    cantidad : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+  }
+
+  entity "kardex_movimientos" as KardexMovimiento {
+    * id : bigint <<PK>>
+    --
+    * cliente_id : bigint <<FK>>
+    obra_id : bigint <<FK>>
+    remision_id : bigint <<FK>>
+    tipo : varchar
+    numero_documento : varchar
+    fecha : datetime
+    valor : decimal
+    estado : varchar
+  }
+
+  entity "kardex_detalles" as KardexDetalle {
+    * id : bigint <<PK>>
+    --
+    * movimiento_id : bigint <<FK>>
+    producto_id : bigint <<FK>>
+    cantidad : decimal
+    precio_unitario : decimal
+    subtotal : decimal
+  }
+}
+
+Cliente ||--o{ ClienteDocumento : "tiene"
+Cliente ||--o{ Obra : "posee"
+Cliente ||--o{ Prestamo : "solicita"
+Cliente ||--o{ Remision : "recibe"
+Cliente ||--o{ KardexMovimiento : "acumula"
+Cliente ||--o{ Cotizacion : "solicita"
+Cliente ||--o{ Salida : "recibe"
+
+TipoProducto ||--o{ Producto : "clasifica"
+Producto ||--o| Inventario : "mantiene stock"
+Producto ||--o{ Lote : "se almacena en"
+Producto ||--o{ EntradaDetalle : "recibe"
+Producto ||--o{ SalidaDetalle : "despacha"
+Producto ||--o{ MovimientoInventario : "moviliza"
+Producto ||--o{ RemisionDetalle : "incluye"
+Producto ||--o{ CotizacionDetalle : "cotiza"
+Producto ||--o{ OrdenCompraDetalle : "se compra"
+Producto ||--o{ PrestamoDetalle : "incluye"
+Producto ||--o{ KardexDetalle : "registra"
+Producto ||--o{ ProductoProveedor : "ofrece"
+Proveedor ||--o{ ProductoProveedor : "suministra"
+Proveedor ||--o{ OrdenCompra : "recibe orden"
+Proveedor ||--o{ Entrada : "suministra"
+
+Obra ||--o{ Prestamo : "relaciona"
+Obra ||--o{ KardexMovimiento : "origina"
+
+Transportador ||--o{ TransportadorVehiculo : "usa"
+Vehiculo ||--o{ TransportadorVehiculo : "es asignado"
+Transportador ||--o{ Viaje : "realiza"
+Vehiculo ||--o{ Viaje : "participa"
+Viaje ||--o{ ViajeRemision : "transporta"
+Remision ||--o{ ViajeRemision : "se asigna"
+
+Transportador ||--o{ Remision : "responsable"
+Remision ||--o{ RemisionDetalle : "contiene"
+Remision ||--o{ RemisionReserva : "reserva"
+Remision ||--o{ RemisionAlarma : "genera"
+Remision ||--o| Factura : "se factura"
+Remision ||--o{ KardexMovimiento : "genera salida"
+Cliente ||--o{ Factura : "recibe"
+Factura ||--o{ FacturaDetalle : "contiene"
+Factura ||--o{ FacturaPago : "recibe pagos"
+Producto ||--o{ FacturaDetalle : "factura"
+
+Cotizacion ||--o{ CotizacionDetalle : "contiene"
+Cotizacion ||--o| Factura : "se convierte en"
+OrdenCompra ||--o{ OrdenCompraDetalle : "contiene"
+OrdenCompra ||--o{ Entrada : "se recibe mediante"
+Entrada ||--o{ EntradaDetalle : "contiene"
+Entrada ||--o{ MovimientoInventario : "genera entrada"
+Salida ||--o{ SalidaDetalle : "contiene"
+Salida ||--o{ MovimientoInventario : "genera salida"
+Lote .. EntradaDetalle : "lote por código"
+
+Usuario ||--o{ Cotizacion : "crea"
+Usuario ||--o{ OrdenCompra : "crea"
+Usuario ||--o{ Salida : "responsable"
+Usuario ||--o{ MovimientoInventario : "registra"
+
+Prestamo ||--o{ PrestamoDetalle : "contiene"
+KardexMovimiento ||--o{ KardexDetalle : "detalla"
+
+note "El backend actual reutiliza cotizaciones como proformas. Las entradas viven en orden_compra; las salidas, lotes y movimientos de inventario también se integran allí." as N1
+N1 .. Cotizacion
+
+@enduml

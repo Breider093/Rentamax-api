@@ -1,0 +1,13 @@
+black
+django
+django-cors-headers
+django-debug-toolbar
+django-extensions
+flake8
+ipython
+psycopg2-binary
+python-dotenv
+reportlab
+openpyxl
+djangorestframework
+pytest
