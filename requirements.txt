@@ -3,6 +3,7 @@ django
 django-cors-headers
 django-debug-toolbar
 django-extensions
+gunicorn
 flake8
 ipython
 psycopg2-binary
