@@ -4,6 +4,7 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Remision, RemisionAlarma, RemisionDetalle, RemisionReserva
 from .services import (
     RemisionDomainError,
@@ -21,7 +22,7 @@ from .serializers import (
 )
 
 
-class RemisionViewSet(viewsets.ModelViewSet):
+class RemisionViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = RemisionSerializer
     queryset = Remision.objects.select_related('cliente', 'transportador').prefetch_related('detalles__producto').all()
 
@@ -43,7 +44,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def confirmar(self, request, pk=None):
         try:
-            remision = confirmar_remision(pk, request.data.get('observaciones', ''))
+            remision = confirmar_remision(pk, request.empresa, request.data.get('observaciones', ''))
         except RemisionDomainError as error:
             return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(RemisionSerializer(remision).data)
@@ -51,7 +52,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def reservar(self, request, pk=None):
         try:
-            remision, reserva = reservar_remision(pk, request.data.get('observaciones', ''))
+            remision, reserva = reservar_remision(pk, request.empresa, request.data.get('observaciones', ''))
         except RemisionDomainError as error:
             return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({**RemisionSerializer(remision).data, 'reserva_id': reserva.id})
@@ -59,7 +60,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def entregar(self, request, pk=None):
         try:
-            remision = entregar_remision(pk)
+            remision = entregar_remision(pk, request.empresa)
         except RemisionDomainError as error:
             return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(RemisionSerializer(remision).data)
@@ -67,7 +68,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def cancelar(self, request, pk=None):
         try:
-            remision = cancelar_remision(pk)
+            remision = cancelar_remision(pk, request.empresa)
         except RemisionDomainError as error:
             return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(RemisionSerializer(remision).data)
@@ -75,7 +76,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def facturar(self, request, pk=None):
         try:
-            remision, factura = facturar_remision(pk)
+            remision, factura = facturar_remision(pk, request.empresa)
         except RemisionDomainError as error:
             return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({
@@ -95,7 +96,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
         )
         creadas = 0
         for remision in remisiones:
-            _, created = RemisionAlarma.objects.get_or_create(
+            _, created = RemisionAlarma.objects.de_empresa(request.empresa).get_or_create(
                 remision=remision,
                 tipo='ENTREGA_VENCIDA',
                 estado=RemisionAlarma.Estado.PENDIENTE,
@@ -108,7 +109,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
             creadas += int(created)
         sin_factura = self.get_queryset().filter(estado=Remision.Estado.ENTREGADA, factura__isnull=True)
         for remision in sin_factura:
-            _, created = RemisionAlarma.objects.get_or_create(
+            _, created = RemisionAlarma.objects.de_empresa(request.empresa).get_or_create(
                 remision=remision,
                 tipo='FACTURA_PENDIENTE',
                 estado=RemisionAlarma.Estado.PENDIENTE,
@@ -118,7 +119,7 @@ class RemisionViewSet(viewsets.ModelViewSet):
         return Response({'alarmas_creadas': creadas})
 
 
-class RemisionDetalleViewSet(viewsets.ModelViewSet):
+class RemisionDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = RemisionDetalle.objects.select_related('remision', 'producto').all()
     serializer_class = RemisionDetalleSerializer
 
@@ -149,7 +150,7 @@ class RemisionDetalleViewSet(viewsets.ModelViewSet):
             remision.recalcular_totales()
 
 
-class RemisionReservaViewSet(viewsets.ModelViewSet):
+class RemisionReservaViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = RemisionReserva.objects.select_related('remision').all()
     serializer_class = RemisionReservaSerializer
 
@@ -174,7 +175,7 @@ class RemisionReservaViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(reserva).data)
 
 
-class RemisionAlarmaViewSet(viewsets.ModelViewSet):
+class RemisionAlarmaViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = RemisionAlarma.objects.select_related('remision').all()
     serializer_class = RemisionAlarmaSerializer
 

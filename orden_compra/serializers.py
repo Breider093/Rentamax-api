@@ -1,13 +1,14 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import (
 	Entrada, EntradaDetalle, Inventario, Lote, MovimientoInventario, OrdenCompra,
 	OrdenCompraDetalle, Salida, SalidaDetalle,
 )
 
 
-class OrdenCompraDetalleSerializer(serializers.ModelSerializer):
+class OrdenCompraDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	orden_compra = serializers.PrimaryKeyRelatedField(
 		queryset=OrdenCompra.objects.all()
 	)
@@ -30,7 +31,7 @@ class OrdenCompraDetalleAnidadoSerializer(OrdenCompraDetalleSerializer):
 	orden_compra = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
-class OrdenCompraSerializer(serializers.ModelSerializer):
+class OrdenCompraSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	detalles = OrdenCompraDetalleAnidadoSerializer(many=True, required=False)
 
 	class Meta:
@@ -55,7 +56,7 @@ class OrdenCompraSerializer(serializers.ModelSerializer):
 		return orden
 
 
-class EntradaDetalleSerializer(serializers.ModelSerializer):
+class EntradaDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	entrada = serializers.PrimaryKeyRelatedField(queryset=Entrada.objects.all())
 	precio = serializers.DecimalField(source='precio_unitario', max_digits=14, decimal_places=2, required=False)
 
@@ -77,7 +78,7 @@ class EntradaDetalleAnidadoSerializer(EntradaDetalleSerializer):
 	entrada = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
-class EntradaSerializer(serializers.ModelSerializer):
+class EntradaSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	detalles = EntradaDetalleAnidadoSerializer(many=True, required=False)
 	fecha = serializers.DateField(source='fecha_entrada', required=False)
 	factura = serializers.CharField(source='numero_factura', required=False, allow_blank=True)
@@ -106,14 +107,14 @@ class EntradaSerializer(serializers.ModelSerializer):
 		return entrada
 
 
-class InventarioSerializer(serializers.ModelSerializer):
+class InventarioSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	class Meta:
 		model = Inventario
 		fields = '__all__'
 		read_only_fields = ['existencia', 'actualizado_en']
 
 
-class SalidaDetalleSerializer(serializers.ModelSerializer):
+class SalidaDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	precio = serializers.DecimalField(source='precio_unitario', max_digits=14, decimal_places=2, required=False)
 
 	class Meta:
@@ -133,7 +134,7 @@ class SalidaDetalleAnidadoSerializer(SalidaDetalleSerializer):
 	salida = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
-class SalidaSerializer(serializers.ModelSerializer):
+class SalidaSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	detalles = SalidaDetalleAnidadoSerializer(many=True, required=False)
 
 	class Meta:
@@ -162,14 +163,14 @@ class SalidaSerializer(serializers.ModelSerializer):
 		return salida
 
 
-class MovimientoInventarioSerializer(serializers.ModelSerializer):
+class MovimientoInventarioSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	class Meta:
 		model = MovimientoInventario
 		fields = '__all__'
 		read_only_fields = ['fecha']
 
 
-class LoteSerializer(serializers.ModelSerializer):
+class LoteSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	class Meta:
 		model = Lote
 		fields = '__all__'

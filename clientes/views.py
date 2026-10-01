@@ -1,20 +1,25 @@
 from io import BytesIO
 from xml.sax.saxutils import escape
 
+from pathlib import Path
+
 from django.http import FileResponse
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
+from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Cliente, ClienteDocumento
 from .serializers import ClienteDocumentoSerializer, ClienteSerializer
 
 
-class ClienteViewSet(viewsets.ModelViewSet):
+class ClienteViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Cliente.objects.prefetch_related('documentos').all()
     serializer_class = ClienteSerializer
 
@@ -81,6 +86,20 @@ class ClienteViewSet(viewsets.ModelViewSet):
         )
 
 
-class ClienteDocumentoViewSet(viewsets.ModelViewSet):
+class ClienteDocumentoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = ClienteDocumento.objects.select_related('cliente').all()
     serializer_class = ClienteDocumentoSerializer
+
+    @action(detail=True, methods=['get'], url_path='archivo', url_name='archivo')
+    def descargar_archivo(self, request, pk=None):
+        documento = self.get_object()
+        if not documento.archivo:
+            raise NotFound('El documento no tiene un archivo disponible.')
+        response = FileResponse(
+            documento.archivo.open('rb'),
+            as_attachment=True,
+            filename=Path(documento.archivo.name).name,
+        )
+        response['Cache-Control'] = 'private, no-store'
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response

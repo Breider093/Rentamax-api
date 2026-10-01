@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from productos.models import Producto, TipoProducto
@@ -10,14 +10,16 @@ from productos.models import Producto, TipoProducto
 from .models import Factura
 
 
-class FacturaFlowTests(APITestCase):
+class FacturaFlowTests(EmpresaAPITestCase):
     def setUp(self):
-        tipo = TipoProducto.objects.create(nombre='Material Factura')
+        super().setUp()
+        tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Material Factura')
         self.cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='CC-FAC-100', tipo_documento='CC', razon_social='Cliente Factura',
             direccion='Calle 1', ciudad='Bogota', email='factura@example.com', celular='3000000000',
         )
-        self.producto = Producto.objects.create(descripcion='Producto Factura', tipo_producto=tipo)
+        self.producto = Producto.objects.create(empresa=self.empresa, descripcion='Producto Factura', tipo_producto=tipo)
 
     def test_crea_calcula_y_paga_factura(self):
         response = self.client.post(reverse('factura-list'), {

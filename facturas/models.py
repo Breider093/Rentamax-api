@@ -3,9 +3,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class Factura(models.Model):
+class Factura(EmpresaModel):
     class Estado(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente'
         EMITIDA = 'EMITIDA', 'Emitida'
@@ -18,7 +19,7 @@ class Factura(models.Model):
         TARJETA = 'TARJETA', 'Tarjeta'
         TRANSFERENCIA = 'TRANSFERENCIA', 'Transferencia'
 
-    numero = models.CharField(max_length=30, unique=True)
+    numero = models.CharField(max_length=30)
     cliente = models.ForeignKey(
         'clientes.Cliente', on_delete=models.PROTECT, related_name='facturas', null=True
     )
@@ -63,6 +64,7 @@ class Factura(models.Model):
             models.Index(fields=['estado'], name='factura_estado_idx'),
         ]
         constraints = [
+            models.UniqueConstraint(fields=['empresa', 'numero'], name='factura_empresa_numero_uq'),
             models.UniqueConstraint(
                 fields=['remision'], condition=models.Q(remision__isnull=False),
                 name='factura_remision_unica',
@@ -87,6 +89,9 @@ class Factura(models.Model):
 
 
 class FacturaDetalle(models.Model):
+    EMPRESA_LOOKUP = 'factura__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='detalles')
     producto = models.ForeignKey(
         'productos.Producto', on_delete=models.PROTECT, related_name='detalles_factura'
@@ -115,6 +120,9 @@ class FacturaDetalle(models.Model):
 
 
 class FacturaPago(models.Model):
+    EMPRESA_LOOKUP = 'factura__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     factura = models.ForeignKey(Factura, on_delete=models.CASCADE, related_name='pagos')
     metodo_pago = models.CharField(max_length=20, choices=Factura.MetodoPago.choices)
     monto = models.DecimalField(max_digits=14, decimal_places=2)

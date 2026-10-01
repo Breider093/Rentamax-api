@@ -1,13 +1,14 @@
 from decimal import Decimal
 
 from django.db import models
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 from clientes.models import Cliente
 from obras.models import Obra
 from productos.models import Producto
 
 
-class Prestamo(models.Model):
+class Prestamo(EmpresaModel):
     class Estado(models.TextChoices):
         RESERVADO = 'RESERVADO', 'Reservado'
         ACTIVO = 'ACTIVO', 'Activo'
@@ -57,6 +58,9 @@ class Prestamo(models.Model):
 
 
 class PrestamoDetalle(models.Model):
+    EMPRESA_LOOKUP = 'prestamo__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     prestamo = models.ForeignKey(
         Prestamo,
         on_delete=models.CASCADE,
@@ -92,6 +96,9 @@ class PrestamoDetalle(models.Model):
 
 
 class EquipoObra(models.Model):
+    EMPRESA_LOOKUP = 'cliente__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Estado(models.TextChoices):
         ACTIVO = 'ACTIVO', 'Activo'
         EN_USO = 'EN_USO', 'En uso'

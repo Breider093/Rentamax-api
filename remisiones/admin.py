@@ -11,7 +11,7 @@ class RemisionDetalleInline(admin.TabularInline):
 @admin.register(Remision)
 class RemisionAdmin(admin.ModelAdmin):
     list_display = ('numero', 'cliente', 'fecha_entrega_programada', 'estado', 'prioridad', 'total')
-    list_filter = ('estado', 'prioridad')
+    list_filter = ('empresa', 'estado', 'prioridad')
     search_fields = ('numero', 'cliente__razon_social', 'cliente__documento')
     inlines = [RemisionDetalleInline]
 
@@ -19,10 +19,10 @@ class RemisionAdmin(admin.ModelAdmin):
 @admin.register(RemisionReserva)
 class RemisionReservaAdmin(admin.ModelAdmin):
     list_display = ('remision', 'fecha_reserva', 'estado')
-    list_filter = ('estado',)
+    list_filter = ('remision__empresa', 'estado')
 
 
 @admin.register(RemisionAlarma)
 class RemisionAlarmaAdmin(admin.ModelAdmin):
     list_display = ('remision', 'tipo', 'prioridad', 'estado', 'fecha_limite')
-    list_filter = ('tipo', 'prioridad', 'estado')
+    list_filter = ('remision__empresa', 'tipo', 'prioridad', 'estado')

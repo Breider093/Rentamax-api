@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from kardex.models import KardexMovimiento
@@ -12,9 +12,11 @@ from productos.models import Producto, TipoProducto
 from .models import Remision, RemisionAlarma
 
 
-class RemisionApiTests(APITestCase):
+class RemisionApiTests(EmpresaAPITestCase):
     def setUp(self):
+        super().setUp()
         self.cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900123456-7',
             tipo_documento='NIT',
             razon_social='Constructora Ejemplo S.A.S.',
@@ -23,8 +25,9 @@ class RemisionApiTests(APITestCase):
             email='contacto@ejemplo.com',
             celular='3001234567',
         )
-        tipo, _ = TipoProducto.objects.get_or_create(nombre='Andamios')
+        tipo, _ = TipoProducto.objects.get_or_create(empresa=self.empresa, nombre='Andamios')
         self.producto = Producto.objects.create(
+            empresa=self.empresa,
             descripcion='Andamio estandar',
             tipo_producto=tipo,
             precio_alquiler=Decimal('100.00'),
@@ -83,6 +86,7 @@ class RemisionApiTests(APITestCase):
 
     def test_genera_alarma_de_entrega_vencida(self):
         remision = Remision.objects.create(
+            empresa=self.empresa,
             cliente=self.cliente,
             fecha_entrega_programada=timezone.localdate() - timedelta(days=1),
         )

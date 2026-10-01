@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Obra
 
 
-class ObraSerializer(serializers.ModelSerializer):
+class ObraSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Obra
         fields = [

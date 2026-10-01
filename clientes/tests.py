@@ -1,13 +1,15 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from .models import Cliente, ClienteDocumento
 
 
-class ClienteApiTests(APITestCase):
+class ClienteApiTests(EmpresaAPITestCase):
     def setUp(self):
+        super().setUp()
         self.cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900123456-7',
             tipo_documento='NIT',
             razon_social='Constructora Ejemplo S.A.S.',

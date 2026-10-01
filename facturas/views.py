@@ -1,16 +1,18 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Factura, FacturaDetalle, FacturaPago
 from .serializers import FacturaDetalleSerializer, FacturaPagoSerializer, FacturaSerializer
 
 
-class FacturaViewSet(viewsets.ModelViewSet):
+class FacturaViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Factura.objects.select_related('cliente', 'remision', 'creado_por').prefetch_related(
         'detalles__producto', 'pagos'
     ).all()
@@ -40,10 +42,16 @@ class FacturaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def pagar(self, request, pk=None):
         with transaction.atomic():
-            factura = Factura.objects.select_for_update().get(pk=pk)
+            factura = get_object_or_404(
+                Factura.objects.de_empresa(request.empresa).select_for_update(),
+                pk=pk,
+            )
             if factura.estado in (Factura.Estado.ANULADA, Factura.Estado.PAGADA):
                 return Response({'detail': 'La factura no admite pagos en su estado actual.'}, status=400)
-            pago_serializer = FacturaPagoSerializer(data={**request.data, 'factura': factura.id})
+            pago_serializer = FacturaPagoSerializer(
+                data={**request.data, 'factura': factura.id},
+                context=self.get_serializer_context(),
+            )
             pago_serializer.is_valid(raise_exception=True)
             monto = pago_serializer.validated_data['monto']
             if monto > factura.saldo_pendiente:
@@ -77,7 +85,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(factura).data)
 
 
-class FacturaDetalleViewSet(viewsets.ModelViewSet):
+class FacturaDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = FacturaDetalle.objects.select_related('factura', 'producto').all()
     serializer_class = FacturaDetalleSerializer
 
@@ -105,7 +113,7 @@ class FacturaDetalleViewSet(viewsets.ModelViewSet):
             factura.recalcular_totales()
 
 
-class FacturaPagoViewSet(viewsets.ModelViewSet):
+class FacturaPagoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = FacturaPago.objects.select_related('factura').all()
     serializer_class = FacturaPagoSerializer
 

@@ -1,0 +1,118 @@
+@startuml diagrama-casos-uso
+
+!theme plain
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #475569
+}
+skinparam package {
+  BackgroundColor #F1F5F9
+  BorderColor #94A3B8
+}
+
+actor "Usuario interno" as Usuario
+actor "Administrador / supervisor" as Admin
+actor "Responsable de bodega" as Bodega
+actor "Cliente" as Cliente
+actor "Proveedor" as Proveedor
+actor "Transportador" as Transportador
+
+rectangle "Rentamax API\nGestion de alquiler, inventario y facturacion" {
+  package "Acceso y configuracion" {
+    usecase "Autenticarse" as UCAuth
+    usecase "Gestionar usuarios y perfiles" as UCUsuarios
+    usecase "Gestionar clientes y obras" as UCClientes
+    usecase "Gestionar catalogo y proveedores" as UCCatalogo
+  }
+  package "Comercial y alquiler" {
+    usecase "Gestionar cotizacion" as UCCotizacion
+    usecase "Aprobar o rechazar cotizacion" as UCEstadoCot
+    usecase "Convertir cotizacion en factura" as UCConvertir
+    usecase "Registrar prestamo y equipos en obra" as UCPrestamo
+  }
+  package "Compras e inventario" {
+    usecase "Gestionar orden de compra" as UCOrden
+    usecase "Registrar entrada de mercancia" as UCEntrada
+    usecase "Actualizar inventario y lotes" as UCInventario
+    usecase "Registrar salida de inventario" as UCSalida
+    usecase "Consultar kardex y saldos" as UCKardex
+  }
+  package "Despacho y transporte" {
+    usecase "Gestionar remision" as UCRemision
+    usecase "Confirmar o reservar remision" as UCConfirmar
+    usecase "Programar y gestionar viaje" as UCViaje
+    usecase "Entregar remision" as UCEntrega
+    usecase "Gestionar alarmas de entrega" as UCAlarmas
+  }
+  package "Devoluciones y cartera" {
+    usecase "Registrar y procesar devolucion" as UCDevolucion
+    usecase "Gestionar factura" as UCFactura
+    usecase "Registrar pago y consultar saldo" as UCPago
+    usecase "Exportar reportes" as UCReportes
+  }
+}
+
+Usuario --> UCAuth
+Usuario --> UCClientes
+Usuario --> UCCatalogo
+Usuario --> UCCotizacion
+Usuario --> UCPrestamo
+Usuario --> UCRemision
+Usuario --> UCViaje
+Usuario --> UCDevolucion
+Usuario --> UCFactura
+Usuario --> UCKardex
+Usuario --> UCReportes
+Admin --> UCUsuarios
+Admin --> UCEstadoCot
+Admin --> UCOrden
+Admin --> UCFactura
+Bodega --> UCEntrada
+Bodega --> UCSalida
+Bodega --> UCInventario
+Bodega --> UCKardex
+Cliente --> UCCotizacion
+Cliente --> UCPrestamo
+Cliente --> UCEntrega
+Cliente --> UCDevolucion
+Cliente --> UCPago
+Proveedor --> UCOrden
+Proveedor --> UCEntrada
+Transportador --> UCViaje
+Transportador --> UCEntrega
+
+UCCotizacion .> UCAuth : <<include>>
+UCCotizacion .> UCClientes : <<include>>
+UCCotizacion .> UCCatalogo : <<include>>
+UCCotizacion .> UCEstadoCot : <<include>>
+UCConvertir .> UCCotizacion : <<extend>>
+UCConvertir .> UCFactura : <<include>>
+UCOrden .> UCCatalogo : <<include>>
+UCEntrada .> UCOrden : <<extend>>
+UCEntrada .> UCInventario : <<include>>
+UCSalida .> UCInventario : <<include>>
+UCEntrega .> UCRemision : <<include>>
+UCEntrega .> UCKardex : <<include>>
+UCConfirmar .> UCRemision : <<extend>>
+UCAlarmas .> UCRemision : <<extend>>
+UCFactura .> UCCatalogo : <<include>>
+UCPago .> UCFactura : <<include>>
+UCDevolucion .> UCKardex : <<extend>>
+
+note right of UCPrestamo
+  Alquiler de equipos asociados
+  a un cliente y una obra.
+end note
+
+legend right
+  Resumen de las capacidades principales
+  expuestas por los endpoints de la API.
+endlegend
+
+@enduml

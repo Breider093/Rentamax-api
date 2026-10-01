@@ -1,10 +1,12 @@
 from rest_framework import viewsets
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Responsable
 from .serializers import ResponsableSerializer
 
 
-class ResponsableViewSet(viewsets.ModelViewSet):
+class ResponsableViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
+    # The mixin applies the active company to this queryset.
     queryset = Responsable.objects.all()
     serializer_class = ResponsableSerializer
 

@@ -4,10 +4,11 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Cotizacion, CotizacionDetalle
 
 
-class CotizacionDetalleSerializer(serializers.ModelSerializer):
+class CotizacionDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	class Meta:
 		model = CotizacionDetalle
 		fields = '__all__'
@@ -27,7 +28,7 @@ class CotizacionDetalleAnidadoSerializer(CotizacionDetalleSerializer):
 	cotizacion = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
-class CotizacionSerializer(serializers.ModelSerializer):
+class CotizacionSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
 	detalles = CotizacionDetalleAnidadoSerializer(many=True, required=False)
 
 	class Meta:

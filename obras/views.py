@@ -1,10 +1,12 @@
 from rest_framework import viewsets
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Obra
 from .serializers import ObraSerializer
 
 
-class ObraViewSet(viewsets.ModelViewSet):
+class ObraViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
+    # Queryset is tenant-scoped by EmpresaQuerysetMixin.
     serializer_class = ObraSerializer
     queryset = Obra.objects.select_related('cliente').all()
 

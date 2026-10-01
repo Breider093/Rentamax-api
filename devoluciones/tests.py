@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from obras.models import Obra
@@ -12,10 +12,12 @@ from transportadores.models import Transportador
 from .models import Devolucion
 
 
-class DevolucionFlowTests(APITestCase):
+class DevolucionFlowTests(EmpresaAPITestCase):
     def setUp(self):
-        tipo = TipoProducto.objects.create(nombre='Material')
+        super().setUp()
+        tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Material')
         self.cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='CC-DEV-100', tipo_documento='CC', razon_social='Cliente Devolucion',
             direccion='Calle 1', ciudad='Bogota', email='dev@example.com', celular='3000000000',
         )
@@ -23,9 +25,10 @@ class DevolucionFlowTests(APITestCase):
             cliente=self.cliente, nombre='Obra Uno', direccion='Carrera 1'
         )
         self.transportador = Transportador.objects.create(
+            empresa=self.empresa,
             nombre='Transportador Uno', documento='NIT-DEV-100'
         )
-        self.producto = Producto.objects.create(descripcion='Producto Devuelto', tipo_producto=tipo, peso_kg='2.50')
+        self.producto = Producto.objects.create(empresa=self.empresa, descripcion='Producto Devuelto', tipo_producto=tipo, peso_kg='2.50')
 
     def test_crea_calcula_procesa_y_filtra_devolucion_sin_factura(self):
         response = self.client.post(reverse('devolucion-list'), {
@@ -56,10 +59,12 @@ class DevolucionFlowTests(APITestCase):
 
     def test_rechaza_obra_de_otro_cliente(self):
         otro_cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='CC-DEV-200', tipo_documento='CC', razon_social='Otro Cliente',
             direccion='Calle 2', ciudad='Bogota', email='otro@example.com', celular='3111111111',
         )
         otra_obra = Obra.objects.create(
+            # Obra scope is inherited from its client.
             cliente=otro_cliente, nombre='Otra Obra', direccion='Carrera 2'
         )
         response = self.client.post(reverse('devolucion-list'), {

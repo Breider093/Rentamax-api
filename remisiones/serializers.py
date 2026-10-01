@@ -2,10 +2,11 @@ from django.db import transaction
 from rest_framework import serializers
 from django.utils import timezone
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Remision, RemisionAlarma, RemisionDetalle, RemisionReserva
 
 
-class RemisionDetalleSerializer(serializers.ModelSerializer):
+class RemisionDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = RemisionDetalle
         fields = '__all__'
@@ -25,8 +26,12 @@ class RemisionDetalleSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class RemisionSerializer(serializers.ModelSerializer):
-    detalles = RemisionDetalleSerializer(many=True, required=False)
+class RemisionDetalleAnidadoSerializer(RemisionDetalleSerializer):
+    remision = serializers.PrimaryKeyRelatedField(read_only=True)
+
+
+class RemisionSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
+    detalles = RemisionDetalleAnidadoSerializer(many=True, required=False)
     tiene_factura = serializers.SerializerMethodField()
 
     class Meta:
@@ -70,14 +75,14 @@ class RemisionSerializer(serializers.ModelSerializer):
         return remision
 
 
-class RemisionReservaSerializer(serializers.ModelSerializer):
+class RemisionReservaSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = RemisionReserva
         fields = '__all__'
         read_only_fields = ['confirmada_at', 'cancelada_at', 'creado_en']
 
 
-class RemisionAlarmaSerializer(serializers.ModelSerializer):
+class RemisionAlarmaSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = RemisionAlarma
         fields = '__all__'

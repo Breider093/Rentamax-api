@@ -1,10 +1,11 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Devolucion, DevolucionDetalle
 
 
-class DevolucionDetalleSerializer(serializers.ModelSerializer):
+class DevolucionDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = DevolucionDetalle
         fields = '__all__'
@@ -22,7 +23,7 @@ class DevolucionDetalleAnidadoSerializer(DevolucionDetalleSerializer):
     devolucion = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
-class DevolucionSerializer(serializers.ModelSerializer):
+class DevolucionSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     detalles = DevolucionDetalleAnidadoSerializer(many=True, required=False)
 
     class Meta:

@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import EquipoObra, Prestamo, PrestamoDetalle
 
 
-class PrestamoDetalleSerializer(serializers.ModelSerializer):
+class PrestamoDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = PrestamoDetalle
         fields = [
@@ -23,7 +24,7 @@ class PrestamoDetalleSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class PrestamoSerializer(serializers.ModelSerializer):
+class PrestamoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     detalles = PrestamoDetalleSerializer(many=True, read_only=True)
 
     class Meta:
@@ -52,7 +53,7 @@ class PrestamoSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class EquipoObraSerializer(serializers.ModelSerializer):
+class EquipoObraSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = EquipoObra
         fields = '__all__'

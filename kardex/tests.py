@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from obras.models import Obra
@@ -10,9 +10,11 @@ from productos.models import Producto, TipoProducto
 from .models import KardexDetalle, KardexMovimiento
 
 
-class KardexApiTests(APITestCase):
+class KardexApiTests(EmpresaAPITestCase):
     def setUp(self):
+        super().setUp()
         self.cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900123456-7',
             tipo_documento='NIT',
             razon_social='Constructora Ejemplo S.A.S.',
@@ -27,15 +29,18 @@ class KardexApiTests(APITestCase):
             direccion='Calle 1 # 2-3',
         )
         self.tipo_producto, _ = TipoProducto.objects.get_or_create(
+            empresa=self.empresa,
             nombre='Andamios'
         )
         self.producto = Producto.objects.create(
+            empresa=self.empresa,
             descripcion='Andamio estándar',
             tipo_producto=self.tipo_producto,
         )
 
     def crear_movimiento(self, tipo, valor):
         return KardexMovimiento.objects.create(
+            empresa=self.empresa,
             cliente=self.cliente,
             tipo=tipo,
             valor=valor,
@@ -96,6 +101,7 @@ class KardexApiTests(APITestCase):
 
     def test_rechaza_obra_de_otro_cliente(self):
         otro_cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900765432-1',
             tipo_documento='NIT',
             razon_social='Otra empresa',

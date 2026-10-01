@@ -2,12 +2,14 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from django.db.models import Q
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import EquipoObra, Prestamo, PrestamoDetalle
 from .serializers import EquipoObraSerializer, PrestamoDetalleSerializer, PrestamoSerializer
 from orden_compra.views import _exportar_excel, _exportar_pdf
 
 
-class PrestamoViewSet(viewsets.ModelViewSet):
+class PrestamoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
+    # All list and detail access passes through the tenant-scoped queryset.
     serializer_class = PrestamoSerializer
     queryset = Prestamo.objects.select_related('cliente', 'obra').prefetch_related(
         'detalles__producto'
@@ -22,7 +24,7 @@ class PrestamoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(cliente_id=cliente)
         if estado:
             queryset = queryset.filter(estado=estado)
-        elif self.request.query_params.get('estado') is None:
+        elif self.action == 'list':
             queryset = queryset.filter(estado=Prestamo.Estado.ACTIVO)
         if obra:
             queryset = queryset.filter(obra_id=obra)
@@ -47,12 +49,13 @@ class PrestamoViewSet(viewsets.ModelViewSet):
         )
 
 
-class PrestamoDetalleViewSet(viewsets.ModelViewSet):
+class PrestamoDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
+    # Details derive their tenant from the loan relation.
     queryset = PrestamoDetalle.objects.select_related('prestamo', 'producto').all()
     serializer_class = PrestamoDetalleSerializer
 
 
-class EquipoObraViewSet(viewsets.ModelViewSet):
+class EquipoObraViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = EquipoObraSerializer
     queryset = EquipoObra.objects.select_related(
         'producto', 'cliente', 'obra',

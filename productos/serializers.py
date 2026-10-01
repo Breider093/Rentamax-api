@@ -1,14 +1,20 @@
 from rest_framework import serializers
+from empresas.serializers import EmpresaSerializerMixin, TenantDownloadFileField
 from .models import Producto, ProductoProveedor, Proveedor, TipoProducto
 
 
-class TipoProductoSerializer(serializers.ModelSerializer):
+class TipoProductoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = TipoProducto
         fields = ['id', 'nombre']
 
 
-class ProductoSerializer(serializers.ModelSerializer):
+class ProductoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
+    manual = TenantDownloadFileField(url_name='producto-manual', required=False, allow_null=True)
+    ficha_tecnica = TenantDownloadFileField(
+        url_name='producto-ficha-tecnica', required=False, allow_null=True,
+    )
+
     class Meta:
         model = Producto
         fields = [
@@ -25,13 +31,13 @@ class ProductoSerializer(serializers.ModelSerializer):
         ]
 
 
-class ProveedorSerializer(serializers.ModelSerializer):
+class ProveedorSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Proveedor
         fields = ['id', 'nombre', 'nit', 'direccion', 'telefono', 'email']
 
 
-class ProductoProveedorSerializer(serializers.ModelSerializer):
+class ProductoProveedorSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ProductoProveedor
         fields = [

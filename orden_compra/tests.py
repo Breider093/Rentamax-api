@@ -2,18 +2,19 @@ from datetime import date
 from decimal import Decimal
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from productos.models import Producto, Proveedor, TipoProducto
 
 from .models import Entrada, Inventario, MovimientoInventario, OrdenCompra, Salida
 
 
-class OrdenCompraFlowTests(APITestCase):
+class OrdenCompraFlowTests(EmpresaAPITestCase):
 	def setUp(self):
-		tipo = TipoProducto.objects.create(nombre='Material')
-		self.proveedor = Proveedor.objects.create(nombre='Proveedor Uno', nit='900123456-1')
-		self.producto = Producto.objects.create(descripcion='Producto Uno', tipo_producto=tipo)
+		super().setUp()
+		tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Material')
+		self.proveedor = Proveedor.objects.create(empresa=self.empresa, nombre='Proveedor Uno', nit='900123456-1')
+		self.producto = Producto.objects.create(empresa=self.empresa, descripcion='Producto Uno', tipo_producto=tipo)
 
 	def test_crea_aprueba_y_confirma_entrada_actualizando_inventario(self):
 		orden_response = self.client.post(reverse('orden-compra-list'), {

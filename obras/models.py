@@ -1,9 +1,13 @@
 from django.db import models
+from empresas.models import EmpresaQuerySet
 
 from clientes.models import Cliente
 
 
 class Obra(models.Model):
+    EMPRESA_LOOKUP = 'cliente__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Estado(models.TextChoices):
         ACTIVA = 'ACTIVA', 'Activa'
         INACTIVA = 'INACTIVA', 'Inactiva'

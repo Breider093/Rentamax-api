@@ -1,16 +1,18 @@
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from facturas.models import Factura, FacturaDetalle
 
 from .models import Cotizacion, CotizacionDetalle
 from .serializers import CotizacionDetalleSerializer, CotizacionSerializer
 
 
-class CotizacionViewSet(viewsets.ModelViewSet):
+class CotizacionViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = Cotizacion.objects.select_related('cliente', 'creado_por').prefetch_related(
 		'detalles__producto'
 	).all()
@@ -73,7 +75,10 @@ class CotizacionViewSet(viewsets.ModelViewSet):
 	@action(detail=True, methods=['post'], url_path='convertir-factura')
 	def convertir_factura(self, request, pk=None):
 		with transaction.atomic():
-			cotizacion = Cotizacion.objects.select_for_update().prefetch_related('detalles').get(pk=pk)
+			cotizacion = get_object_or_404(
+				Cotizacion.objects.de_empresa(request.empresa).select_for_update().prefetch_related('detalles'),
+				pk=pk,
+			)
 			if cotizacion.estado == Cotizacion.Estado.CONVERTIDA:
 				return Response({'detail': 'La cotización ya fue convertida.'}, status=status.HTTP_400_BAD_REQUEST)
 			if cotizacion.estado not in (Cotizacion.Estado.PENDIENTE, Cotizacion.Estado.APROBADA):
@@ -82,6 +87,7 @@ class CotizacionViewSet(viewsets.ModelViewSet):
 				return Response({'detail': 'La cotización debe tener al menos un producto.'}, status=status.HTTP_400_BAD_REQUEST)
 
 			factura = Factura.objects.create(
+				empresa=cotizacion.empresa,
 				numero=timezone.now().strftime('FAC-%Y%m%d-%H%M%S-%f'),
 				cliente=cotizacion.cliente,
 				cotizacion=cotizacion,
@@ -105,7 +111,7 @@ class CotizacionViewSet(viewsets.ModelViewSet):
 		return Response({'factura': factura.id, 'cotizacion': self.get_serializer(cotizacion).data}, status=status.HTTP_201_CREATED)
 
 
-class CotizacionDetalleViewSet(viewsets.ModelViewSet):
+class CotizacionDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = CotizacionDetalle.objects.select_related('cotizacion', 'producto').all()
 	serializer_class = CotizacionDetalleSerializer
 

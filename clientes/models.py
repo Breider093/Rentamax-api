@@ -1,8 +1,9 @@
 from django.db import models
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class Cliente(models.Model):
-    documento = models.CharField(max_length=27, unique=True)
+class Cliente(EmpresaModel):
+    documento = models.CharField(max_length=27)
     tipo_documento = models.CharField(max_length=20, blank=True)
     razon_social = models.CharField(max_length=150)
     direccion = models.CharField(max_length=150)
@@ -23,12 +24,18 @@ class Cliente(models.Model):
             models.Index(fields=['razon_social'], name='clientes_razon_social_idx'),
             models.Index(fields=['habilitado'], name='clientes_habilitado_idx'),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'documento'], name='cliente_empresa_doc_uq'),
+        ]
 
     def __str__(self):
         return f'{self.razon_social} ({self.documento})'
 
 
 class ClienteDocumento(models.Model):
+    EMPRESA_LOOKUP = 'cliente__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Tipo(models.TextChoices):
         RUT = 'rut', 'RUT'
         CEDULA_REPRESENTANTE = 'cedula_repr', 'Cédula del representante'

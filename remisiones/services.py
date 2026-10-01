@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from facturas.models import Factura, FacturaDetalle
@@ -12,8 +13,10 @@ class RemisionDomainError(Exception):
 
 
 @transaction.atomic
-def confirmar_remision(remision_id, observaciones=''):
-    remision = Remision.objects.select_for_update().get(pk=remision_id)
+def confirmar_remision(remision_id, empresa, observaciones=''):
+    remision = get_object_or_404(
+        Remision.objects.de_empresa(empresa).select_for_update(), pk=remision_id,
+    )
     if remision.estado != Remision.Estado.PENDIENTE:
         raise RemisionDomainError('Solo se pueden confirmar remisiones pendientes.')
     if not remision.detalles.exists():
@@ -24,8 +27,10 @@ def confirmar_remision(remision_id, observaciones=''):
 
 
 @transaction.atomic
-def reservar_remision(remision_id, observaciones=''):
-    remision = Remision.objects.select_for_update().get(pk=remision_id)
+def reservar_remision(remision_id, empresa, observaciones=''):
+    remision = get_object_or_404(
+        Remision.objects.de_empresa(empresa).select_for_update(), pk=remision_id,
+    )
     if remision.estado != Remision.Estado.CONFIRMADA:
         raise RemisionDomainError('Solo se pueden reservar remisiones confirmadas.')
     reserva = remision.reservas.select_for_update().filter(
@@ -45,8 +50,10 @@ def reservar_remision(remision_id, observaciones=''):
 
 
 @transaction.atomic
-def cancelar_remision(remision_id):
-    remision = Remision.objects.select_for_update().get(pk=remision_id)
+def cancelar_remision(remision_id, empresa):
+    remision = get_object_or_404(
+        Remision.objects.de_empresa(empresa).select_for_update(), pk=remision_id,
+    )
     if remision.estado in (Remision.Estado.ENTREGADA, Remision.Estado.CANCELADA):
         raise RemisionDomainError('La remisión no se puede cancelar en su estado actual.')
     remision.estado = Remision.Estado.CANCELADA
@@ -58,8 +65,10 @@ def cancelar_remision(remision_id):
 
 
 @transaction.atomic
-def entregar_remision(remision_id):
-    remision = Remision.objects.select_for_update().get(pk=remision_id)
+def entregar_remision(remision_id, empresa):
+    remision = get_object_or_404(
+        Remision.objects.de_empresa(empresa).select_for_update(), pk=remision_id,
+    )
     if remision.estado not in (Remision.Estado.CONFIRMADA, Remision.Estado.RESERVADA):
         raise RemisionDomainError('La remisión debe estar confirmada o reservada para entregarse.')
     detalles = list(remision.detalles.select_related('producto'))
@@ -67,6 +76,7 @@ def entregar_remision(remision_id):
         raise RemisionDomainError('La remisión debe tener al menos un detalle.')
 
     movimiento = KardexMovimiento.objects.create(
+        empresa=remision.empresa,
         cliente=remision.cliente,
         tipo=KardexMovimiento.Tipo.VENTA,
         numero_documento=remision.numero,
@@ -94,14 +104,17 @@ def entregar_remision(remision_id):
 
 
 @transaction.atomic
-def facturar_remision(remision_id):
-    remision = Remision.objects.select_for_update().get(pk=remision_id)
-    factura = Factura.objects.filter(remision=remision).first()
+def facturar_remision(remision_id, empresa):
+    remision = get_object_or_404(
+        Remision.objects.de_empresa(empresa).select_for_update(), pk=remision_id,
+    )
+    factura = Factura.objects.de_empresa(empresa).filter(remision=remision).first()
     if factura:
         return remision, factura
     if remision.estado not in (Remision.Estado.CONFIRMADA, Remision.Estado.RESERVADA, Remision.Estado.ENTREGADA):
         raise RemisionDomainError('Solo se pueden facturar remisiones confirmadas, reservadas o entregadas.')
     factura = Factura.objects.create(
+        empresa=remision.empresa,
         numero=f'FAC-{timezone.now():%Y%m%d%H%M%S%f}',
         cliente=remision.cliente,
         remision=remision,

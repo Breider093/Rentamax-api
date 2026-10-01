@@ -11,7 +11,7 @@ class DevolucionDetalleInline(admin.TabularInline):
 @admin.register(Devolucion)
 class DevolucionAdmin(admin.ModelAdmin):
     list_display = ('numero', 'cliente', 'factura', 'estado', 'estado_factura', 'creado_en')
-    list_filter = ('estado', 'estado_factura', 'creado_en')
+    list_filter = ('empresa', 'estado', 'estado_factura', 'creado_en')
     search_fields = ('numero', 'cliente__razon_social', 'factura__numero')
     inlines = [DevolucionDetalleInline]
 
@@ -19,5 +19,5 @@ class DevolucionAdmin(admin.ModelAdmin):
 @admin.register(DevolucionDetalle)
 class DevolucionDetalleAdmin(admin.ModelAdmin):
     list_display = ('devolucion', 'producto', 'cantidad', 'motivo', 'total_kg')
-    list_filter = ('motivo',)
+    list_filter = ('devolucion__empresa', 'motivo')
     search_fields = ('devolucion__numero', 'producto__descripcion')

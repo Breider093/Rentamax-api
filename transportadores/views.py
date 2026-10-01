@@ -1,9 +1,11 @@
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from remisiones.models import Remision
 
 from .models import Transportador, TransportadorVehiculo, Vehiculo, Viaje, ViajeRemision
@@ -16,7 +18,7 @@ from .serializers import (
 )
 
 
-class TransportadorViewSet(viewsets.ModelViewSet):
+class TransportadorViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Transportador.objects.prefetch_related('asignaciones_vehiculo__vehiculo').all()
     serializer_class = TransportadorSerializer
 
@@ -28,7 +30,7 @@ class TransportadorViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class VehiculoViewSet(viewsets.ModelViewSet):
+class VehiculoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Vehiculo.objects.all()
     serializer_class = VehiculoSerializer
 
@@ -43,12 +45,12 @@ class VehiculoViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class TransportadorVehiculoViewSet(viewsets.ModelViewSet):
+class TransportadorVehiculoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = TransportadorVehiculo.objects.select_related('transportador', 'vehiculo').all()
     serializer_class = TransportadorVehiculoSerializer
 
 
-class ViajeViewSet(viewsets.ModelViewSet):
+class ViajeViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Viaje.objects.select_related('transportador', 'vehiculo').prefetch_related('remisiones').all()
     serializer_class = ViajeSerializer
 
@@ -100,7 +102,7 @@ class ViajeViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(viaje).data)
 
 
-class ViajeRemisionViewSet(viewsets.ModelViewSet):
+class ViajeRemisionViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = ViajeRemision.objects.select_related('viaje', 'remision').all()
     serializer_class = ViajeRemisionSerializer
 
@@ -108,8 +110,14 @@ class ViajeRemisionViewSet(viewsets.ModelViewSet):
             viaje_id = serializer.validated_data['viaje'].pk
             remision_id = serializer.validated_data['remision'].pk
             with transaction.atomic():
-                viaje = Viaje.objects.select_for_update().get(pk=viaje_id)
-                remision = Remision.objects.select_for_update().get(pk=remision_id)
+                viaje = get_object_or_404(
+                    Viaje.objects.de_empresa(self.request.empresa).select_for_update(),
+                    pk=viaje_id,
+                )
+                remision = get_object_or_404(
+                    Remision.objects.de_empresa(self.request.empresa).select_for_update(),
+                    pk=remision_id,
+                )
                 if viaje.estado != Viaje.Estado.PROGRAMADO:
                     raise serializers.ValidationError({'viaje': 'Solo se pueden asignar viajes programados.'})
                 if remision.estado in (Remision.Estado.ENTREGADA, Remision.Estado.CANCELADA):

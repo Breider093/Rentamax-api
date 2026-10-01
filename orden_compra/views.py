@@ -4,6 +4,7 @@ from xml.sax.saxutils import escape
 from django.db import models, transaction
 from django.db.models import Q
 from django.http import FileResponse, HttpResponse
+from django.shortcuts import get_object_or_404
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from reportlab.lib import colors
@@ -15,10 +16,12 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import (
 	Entrada, EntradaDetalle, Inventario, Lote, MovimientoInventario, OrdenCompra,
 	OrdenCompraDetalle, Salida, SalidaDetalle,
 )
+from productos.models import Producto
 from .serializers import (
 	EntradaDetalleSerializer, EntradaSerializer, InventarioSerializer, LoteSerializer,
 	MovimientoInventarioSerializer, OrdenCompraDetalleSerializer, OrdenCompraSerializer,
@@ -26,7 +29,7 @@ from .serializers import (
 )
 
 
-class OrdenCompraViewSet(viewsets.ModelViewSet):
+class OrdenCompraViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = OrdenCompra.objects.select_related('proveedor', 'creado_por').prefetch_related('detalles__producto').all()
 	serializer_class = OrdenCompraSerializer
 
@@ -62,7 +65,7 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
 		return Response(self.get_serializer(orden).data)
 
 
-class OrdenCompraDetalleViewSet(viewsets.ModelViewSet):
+class OrdenCompraDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = OrdenCompraDetalle.objects.select_related('orden_compra', 'producto').all()
 	serializer_class = OrdenCompraDetalleSerializer
 
@@ -90,19 +93,25 @@ class OrdenCompraDetalleViewSet(viewsets.ModelViewSet):
 			orden.recalcular_totales()
 
 
-class EntradaViewSet(viewsets.ModelViewSet):
+class EntradaViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = Entrada.objects.select_related('proveedor', 'orden_compra').prefetch_related('detalles__producto').all()
 	serializer_class = EntradaSerializer
 
 	@action(detail=True, methods=['post'])
 	def confirmar(self, request, pk=None):
 		with transaction.atomic():
-			entrada = Entrada.objects.select_for_update().prefetch_related('detalles').get(pk=pk)
+			entrada = get_object_or_404(
+				Entrada.objects.de_empresa(request.empresa).select_for_update().prefetch_related('detalles'),
+				pk=pk,
+			)
 			if entrada.estado != Entrada.Estado.PENDIENTE:
 				return Response({'detail': 'Solo se pueden confirmar entradas pendientes.'}, status=400)
 			orden = None
 			if entrada.orden_compra_id:
-				orden = OrdenCompra.objects.select_for_update().get(pk=entrada.orden_compra_id)
+				orden = get_object_or_404(
+					OrdenCompra.objects.de_empresa(request.empresa).select_for_update(),
+					pk=entrada.orden_compra_id,
+				)
 				if orden.estado not in (OrdenCompra.Estado.APROBADA, OrdenCompra.Estado.PENDIENTE):
 					return Response({'detail': 'La orden no está disponible para recepción.'}, status=400)
 			for detalle in entrada.detalles.all():
@@ -115,11 +124,13 @@ class EntradaViewSet(viewsets.ModelViewSet):
 						return Response({'detail': f'La cantidad recibida supera la orden para el producto {detalle.producto_id}.'}, status=400)
 					orden_detalle.cantidad_recibida += detalle.cantidad
 					orden_detalle.save(update_fields=['cantidad_recibida'])
-				inventario, _ = Inventario.objects.select_for_update().get_or_create(producto_id=detalle.producto_id)
+				producto = Producto.objects.de_empresa(request.empresa).get(pk=detalle.producto_id)
+				inventario, _ = Inventario.objects.de_empresa(request.empresa).select_for_update().get_or_create(producto=producto)
 				inventario.existencia += detalle.cantidad
 				inventario.save(update_fields=['existencia', 'actualizado_en'])
 				MovimientoInventario.objects.create(
-					producto_id=detalle.producto_id,
+					producto=producto,
+					# Company is derived through the scoped product.
 					tipo=MovimientoInventario.Tipo.ENTRADA,
 					cantidad=detalle.cantidad,
 					referencia_tipo='ENTRADA',
@@ -128,8 +139,8 @@ class EntradaViewSet(viewsets.ModelViewSet):
 					usuario=request.user if request.user.is_authenticated else None,
 				)
 				if detalle.lote:
-					lote, _ = Lote.objects.select_for_update().get_or_create(
-						producto_id=detalle.producto_id, codigo=detalle.lote,
+					lote, _ = Lote.objects.de_empresa(request.empresa).select_for_update().get_or_create(
+						producto=producto, codigo=detalle.lote,
 					)
 					lote.cantidad_disponible += detalle.cantidad
 					lote.save(update_fields=['cantidad_disponible'])
@@ -141,7 +152,7 @@ class EntradaViewSet(viewsets.ModelViewSet):
 		return Response(self.get_serializer(entrada).data)
 
 
-class EntradaDetalleViewSet(viewsets.ModelViewSet):
+class EntradaDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = EntradaDetalle.objects.select_related('entrada', 'producto').all()
 	serializer_class = EntradaDetalleSerializer
 
@@ -154,7 +165,7 @@ class EntradaDetalleViewSet(viewsets.ModelViewSet):
 			entrada.recalcular_totales()
 
 
-class SalidaViewSet(viewsets.ModelViewSet):
+class SalidaViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = Salida.objects.select_related('cliente', 'responsable').prefetch_related('detalles__producto').all()
 	serializer_class = SalidaSerializer
 
@@ -172,19 +183,24 @@ class SalidaViewSet(viewsets.ModelViewSet):
 	@action(detail=True, methods=['post'])
 	def completar(self, request, pk=None):
 		with transaction.atomic():
-			salida = Salida.objects.select_for_update().prefetch_related('detalles').get(pk=pk)
+			salida = get_object_or_404(
+				Salida.objects.de_empresa(request.empresa).select_for_update().prefetch_related('detalles'),
+				pk=pk,
+			)
 			if salida.estado != Salida.Estado.PENDIENTE:
 				return Response({'detail': 'Solo se pueden completar salidas pendientes.'}, status=400)
 			if not salida.detalles.exists():
 				return Response({'detail': 'La salida debe tener al menos un producto.'}, status=400)
 			for detalle in salida.detalles.all():
-				inventario, _ = Inventario.objects.select_for_update().get_or_create(producto_id=detalle.producto_id)
+				producto = Producto.objects.de_empresa(request.empresa).get(pk=detalle.producto_id)
+				inventario, _ = Inventario.objects.de_empresa(request.empresa).select_for_update().get_or_create(producto=producto)
 				if inventario.existencia < detalle.cantidad:
 					return Response({'detail': f'Inventario insuficiente para el producto {detalle.producto_id}.'}, status=400)
 				inventario.existencia -= detalle.cantidad
 				inventario.save(update_fields=['existencia', 'actualizado_en'])
 				MovimientoInventario.objects.create(
-					producto_id=detalle.producto_id,
+					producto=producto,
+					# Company is derived through the scoped product.
 					tipo=MovimientoInventario.Tipo.SALIDA,
 					cantidad=detalle.cantidad,
 					referencia_tipo='SALIDA',
@@ -196,7 +212,7 @@ class SalidaViewSet(viewsets.ModelViewSet):
 		return Response(self.get_serializer(salida).data)
 
 
-class SalidaDetalleViewSet(viewsets.ModelViewSet):
+class SalidaDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = SalidaDetalle.objects.select_related('salida', 'producto').all()
 	serializer_class = SalidaDetalleSerializer
 
@@ -224,7 +240,7 @@ class SalidaDetalleViewSet(viewsets.ModelViewSet):
 			salida.recalcular_totales()
 
 
-class InventarioViewSet(viewsets.ReadOnlyModelViewSet):
+class InventarioViewSet(EmpresaQuerysetMixin, viewsets.ReadOnlyModelViewSet):
 	queryset = Inventario.objects.select_related('producto', 'proveedor', 'producto__tipo_producto').all()
 	serializer_class = InventarioSerializer
 
@@ -262,7 +278,7 @@ class InventarioViewSet(viewsets.ReadOnlyModelViewSet):
 		)
 
 
-class MovimientoInventarioViewSet(viewsets.ReadOnlyModelViewSet):
+class MovimientoInventarioViewSet(EmpresaQuerysetMixin, viewsets.ReadOnlyModelViewSet):
 	queryset = MovimientoInventario.objects.select_related('producto', 'usuario').all()
 	serializer_class = MovimientoInventarioSerializer
 
@@ -277,7 +293,7 @@ class MovimientoInventarioViewSet(viewsets.ReadOnlyModelViewSet):
 		return queryset
 
 
-class LoteViewSet(viewsets.ModelViewSet):
+class LoteViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
 	queryset = Lote.objects.select_related('producto').all()
 	serializer_class = LoteSerializer
 

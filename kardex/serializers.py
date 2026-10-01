@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import KardexDetalle, KardexMovimiento
 
 
-class KardexDetalleSerializer(serializers.ModelSerializer):
+class KardexDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = KardexDetalle
         fields = [
@@ -20,7 +21,7 @@ class KardexDetalleSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class KardexMovimientoSerializer(serializers.ModelSerializer):
+class KardexMovimientoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     detalles = KardexDetalleSerializer(many=True, read_only=True)
 
     class Meta:

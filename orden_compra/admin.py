@@ -19,7 +19,7 @@ class EntradaDetalleInline(admin.TabularInline):
 @admin.register(OrdenCompra)
 class OrdenCompraAdmin(admin.ModelAdmin):
 	list_display = ('numero', 'proveedor', 'fecha_emision', 'estado', 'total')
-	list_filter = ('estado', 'fecha_emision')
+	list_filter = ('empresa', 'estado', 'fecha_emision')
 	search_fields = ('numero', 'proveedor__nombre')
 	inlines = [OrdenCompraDetalleInline]
 
@@ -27,7 +27,7 @@ class OrdenCompraAdmin(admin.ModelAdmin):
 @admin.register(Entrada)
 class EntradaAdmin(admin.ModelAdmin):
 	list_display = ('numero', 'proveedor', 'orden_compra', 'fecha_entrada', 'estado', 'total')
-	list_filter = ('estado', 'fecha_entrada')
+	list_filter = ('empresa', 'estado', 'fecha_entrada')
 	search_fields = ('numero', 'numero_factura', 'proveedor__nombre')
 	inlines = [EntradaDetalleInline]
 
@@ -35,6 +35,7 @@ class EntradaAdmin(admin.ModelAdmin):
 @admin.register(Inventario)
 class InventarioAdmin(admin.ModelAdmin):
 	list_display = ('producto', 'existencia', 'actualizado_en')
+	list_filter = ('producto__empresa',)
 	search_fields = ('producto__descripcion',)
 
 
@@ -46,7 +47,7 @@ class SalidaDetalleInline(admin.TabularInline):
 @admin.register(Salida)
 class SalidaAdmin(admin.ModelAdmin):
 	list_display = ('numero', 'fecha', 'tipo', 'cliente', 'estado', 'total')
-	list_filter = ('tipo', 'estado', 'fecha')
+	list_filter = ('empresa', 'tipo', 'estado', 'fecha')
 	search_fields = ('numero', 'cliente__razon_social')
 	inlines = [SalidaDetalleInline]
 
@@ -54,11 +55,12 @@ class SalidaAdmin(admin.ModelAdmin):
 @admin.register(MovimientoInventario)
 class MovimientoInventarioAdmin(admin.ModelAdmin):
 	list_display = ('producto', 'tipo', 'cantidad', 'referencia_tipo', 'referencia_id', 'fecha')
-	list_filter = ('tipo', 'fecha')
+	list_filter = ('producto__empresa', 'tipo', 'fecha')
 	search_fields = ('producto__descripcion', 'referencia_tipo')
 
 
 @admin.register(Lote)
 class LoteAdmin(admin.ModelAdmin):
 	list_display = ('producto', 'codigo', 'fecha_vencimiento', 'cantidad_disponible')
+	list_filter = ('producto__empresa',)
 	search_fields = ('producto__descripcion', 'codigo')

@@ -1,10 +1,11 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Factura, FacturaDetalle, FacturaPago
 
 
-class FacturaDetalleSerializer(serializers.ModelSerializer):
+class FacturaDetalleSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = FacturaDetalle
         fields = '__all__'
@@ -22,7 +23,7 @@ class FacturaDetalleAnidadoSerializer(FacturaDetalleSerializer):
     factura = serializers.PrimaryKeyRelatedField(read_only=True)
 
 
-class FacturaSerializer(serializers.ModelSerializer):
+class FacturaSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     detalles = FacturaDetalleAnidadoSerializer(many=True, required=False)
     saldo_pendiente = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
 
@@ -93,7 +94,7 @@ class FacturaSerializer(serializers.ModelSerializer):
         return factura
 
 
-class FacturaPagoSerializer(serializers.ModelSerializer):
+class FacturaPagoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = FacturaPago
         fields = '__all__'

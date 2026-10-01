@@ -1,10 +1,10 @@
 from django.db import models
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class TipoProducto(models.Model):
+class TipoProducto(EmpresaModel):
     nombre = models.CharField(
         max_length=100,
-        unique=True
     )
 
     class Meta:
@@ -12,13 +12,16 @@ class TipoProducto(models.Model):
         verbose_name = 'Tipo de Producto'
         verbose_name_plural = 'Tipos de Producto'
         ordering = ['nombre']
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'nombre'], name='tipo_producto_empresa_nombre_uq'),
+        ]
 
     def __str__(self):
         return self.nombre
 
 
-class Producto(models.Model):
-    codigo = models.CharField(max_length=50, unique=True, null=True, blank=True)
+class Producto(EmpresaModel):
+    codigo = models.CharField(max_length=50, null=True, blank=True)
     descripcion = models.CharField(max_length=255)
 
     tipo_producto = models.ForeignKey(
@@ -76,14 +79,17 @@ class Producto(models.Model):
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'
         ordering = ['descripcion']
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'codigo'], name='producto_empresa_codigo_uq'),
+        ]
 
     def __str__(self):
         return self.descripcion
 
 
-class Proveedor(models.Model):
+class Proveedor(EmpresaModel):
     nombre = models.CharField(max_length=150)
-    nit = models.CharField(max_length=30, unique=True, null=True, blank=True)
+    nit = models.CharField(max_length=30, null=True, blank=True)
     direccion = models.CharField(max_length=255, null=True, blank=True)
     telefono = models.CharField(max_length=30, null=True, blank=True)
     email = models.EmailField(max_length=100, null=True, blank=True)
@@ -91,12 +97,18 @@ class Proveedor(models.Model):
     class Meta:
         db_table = 'proveedor'
         ordering = ['nombre']
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'nit'], name='proveedor_empresa_nit_uq'),
+        ]
 
     def __str__(self):
         return self.nombre
 
 
 class ProductoProveedor(models.Model):
+    EMPRESA_LOOKUP = 'producto__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     producto = models.ForeignKey(
         Producto,
         on_delete=models.CASCADE,

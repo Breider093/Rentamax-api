@@ -2,9 +2,10 @@ from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class Remision(models.Model):
+class Remision(EmpresaModel):
     class Estado(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente'
         CONFIRMADA = 'CONFIRMADA', 'Confirmada'
@@ -16,7 +17,7 @@ class Remision(models.Model):
         NORMAL = 'NORMAL', 'Normal'
         URGENTE = 'URGENTE', 'Urgente'
 
-    numero = models.CharField(max_length=30, unique=True, blank=True)
+    numero = models.CharField(max_length=30, blank=True)
     cliente = models.ForeignKey(
         'clientes.Cliente',
         on_delete=models.PROTECT,
@@ -56,6 +57,9 @@ class Remision(models.Model):
             models.Index(fields=['cliente'], name='remisiones_cliente_idx'),
             models.Index(fields=['estado', 'fecha_entrega_programada'], name='remisiones_estado_fecha_idx'),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'numero'], name='remision_empresa_numero_uq'),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.numero:
@@ -73,6 +77,9 @@ class Remision(models.Model):
 
 
 class RemisionDetalle(models.Model):
+    EMPRESA_LOOKUP = 'remision__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     remision = models.ForeignKey(
         Remision,
         on_delete=models.CASCADE,
@@ -112,6 +119,9 @@ class RemisionDetalle(models.Model):
 
 
 class RemisionReserva(models.Model):
+    EMPRESA_LOOKUP = 'remision__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Estado(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente'
         CONFIRMADA = 'CONFIRMADA', 'Confirmada'
@@ -138,6 +148,9 @@ class RemisionReserva(models.Model):
 
 
 class RemisionAlarma(models.Model):
+    EMPRESA_LOOKUP = 'remision__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Estado(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente'
         RESUELTA = 'RESUELTA', 'Resuelta'

@@ -3,16 +3,17 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class OrdenCompra(models.Model):
+class OrdenCompra(EmpresaModel):
 	class Estado(models.TextChoices):
 		PENDIENTE = 'PENDIENTE', 'Pendiente'
 		APROBADA = 'APROBADA', 'Aprobada'
 		COMPLETADA = 'COMPLETADA', 'Completada'
 		CANCELADA = 'CANCELADA', 'Cancelada'
 
-	numero = models.CharField(max_length=30, unique=True, blank=True)
+	numero = models.CharField(max_length=30, blank=True)
 	proveedor = models.ForeignKey(
 		'productos.Proveedor', on_delete=models.PROTECT, related_name='ordenes_compra'
 	)
@@ -37,6 +38,9 @@ class OrdenCompra(models.Model):
 			models.Index(fields=['proveedor'], name='orden_compra_proveedor_idx'),
 			models.Index(fields=['estado', 'fecha_entrega_programada'], name='orden_compra_estado_fecha_idx'),
 		]
+		constraints = [
+			models.UniqueConstraint(fields=['empresa', 'numero'], name='orden_empresa_numero_uq'),
+		]
 
 	def save(self, *args, **kwargs):
 		if not self.numero:
@@ -54,6 +58,9 @@ class OrdenCompra(models.Model):
 
 
 class OrdenCompraDetalle(models.Model):
+	EMPRESA_LOOKUP = 'orden_compra__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	orden_compra = models.ForeignKey(OrdenCompra, on_delete=models.CASCADE, related_name='detalles')
 	producto = models.ForeignKey(
 		'productos.Producto', on_delete=models.PROTECT, related_name='detalles_orden_compra'
@@ -81,13 +88,13 @@ class OrdenCompraDetalle(models.Model):
 		super().save(*args, **kwargs)
 
 
-class Entrada(models.Model):
+class Entrada(EmpresaModel):
 	class Estado(models.TextChoices):
 		PENDIENTE = 'PENDIENTE', 'Pendiente'
 		CONFIRMADA = 'CONFIRMADA', 'Confirmada'
 		CANCELADA = 'CANCELADA', 'Cancelada'
 
-	numero = models.CharField(max_length=30, unique=True, blank=True)
+	numero = models.CharField(max_length=30, blank=True)
 	proveedor = models.ForeignKey(
 		'productos.Proveedor', on_delete=models.PROTECT, related_name='entradas'
 	)
@@ -105,6 +112,9 @@ class Entrada(models.Model):
 	class Meta:
 		db_table = 'entradas'
 		ordering = ['-fecha_entrada', '-id']
+		constraints = [
+			models.UniqueConstraint(fields=['empresa', 'numero'], name='entrada_empresa_numero_uq'),
+		]
 
 	def save(self, *args, **kwargs):
 		if not self.numero:
@@ -118,6 +128,9 @@ class Entrada(models.Model):
 
 
 class EntradaDetalle(models.Model):
+	EMPRESA_LOOKUP = 'entrada__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	entrada = models.ForeignKey(Entrada, on_delete=models.CASCADE, related_name='detalles')
 	producto = models.ForeignKey(
 		'productos.Producto', on_delete=models.PROTECT, related_name='detalles_entrada'
@@ -142,6 +155,9 @@ class EntradaDetalle(models.Model):
 
 
 class Inventario(models.Model):
+	EMPRESA_LOOKUP = 'producto__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	producto = models.OneToOneField('productos.Producto', on_delete=models.CASCADE, related_name='inventario')
 	proveedor = models.ForeignKey(
 		'productos.Proveedor', on_delete=models.PROTECT, null=True, blank=True,
@@ -163,7 +179,7 @@ class Inventario(models.Model):
 		db_table = 'inventario'
 
 
-class Salida(models.Model):
+class Salida(EmpresaModel):
 	class Tipo(models.TextChoices):
 		VENTA = 'VENTA', 'Venta'
 		DEVOLUCION = 'DEVOLUCION', 'Devolución'
@@ -174,7 +190,7 @@ class Salida(models.Model):
 		COMPLETADA = 'COMPLETADA', 'Completada'
 		CANCELADA = 'CANCELADA', 'Cancelada'
 
-	numero = models.CharField(max_length=30, unique=True, blank=True)
+	numero = models.CharField(max_length=30, blank=True)
 	fecha = models.DateField(default=timezone.localdate)
 	cliente = models.ForeignKey(
 		'clientes.Cliente', on_delete=models.PROTECT, null=True, blank=True, related_name='salidas'
@@ -198,6 +214,9 @@ class Salida(models.Model):
 			models.Index(fields=['cliente'], name='salida_cliente_idx'),
 			models.Index(fields=['estado', 'fecha'], name='salida_estado_fecha_idx'),
 		]
+		constraints = [
+			models.UniqueConstraint(fields=['empresa', 'numero'], name='salida_empresa_numero_uq'),
+		]
 
 	def save(self, *args, **kwargs):
 		if not self.numero:
@@ -211,6 +230,9 @@ class Salida(models.Model):
 
 
 class SalidaDetalle(models.Model):
+	EMPRESA_LOOKUP = 'salida__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	salida = models.ForeignKey(Salida, on_delete=models.CASCADE, related_name='detalles')
 	producto = models.ForeignKey(
 		'productos.Producto', on_delete=models.PROTECT, related_name='detalles_salida'
@@ -237,6 +259,9 @@ class SalidaDetalle(models.Model):
 
 
 class MovimientoInventario(models.Model):
+	EMPRESA_LOOKUP = 'producto__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	class Tipo(models.TextChoices):
 		ENTRADA = 'ENTRADA', 'Entrada'
 		SALIDA = 'SALIDA', 'Salida'
@@ -262,6 +287,9 @@ class MovimientoInventario(models.Model):
 
 
 class Lote(models.Model):
+	EMPRESA_LOOKUP = 'producto__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	producto = models.ForeignKey('productos.Producto', on_delete=models.PROTECT, related_name='lotes')
 	codigo = models.CharField(max_length=100)
 	fecha_vencimiento = models.DateField(null=True, blank=True)

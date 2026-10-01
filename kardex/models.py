@@ -2,13 +2,14 @@ from decimal import Decimal
 
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 from clientes.models import Cliente
 from obras.models import Obra
 from productos.models import Producto
 
 
-class KardexMovimiento(models.Model):
+class KardexMovimiento(EmpresaModel):
     class Tipo(models.TextChoices):
         VENTA = 'VENTA', 'Venta'
         PRESTAMO = 'PRESTAMO', 'Préstamo'
@@ -56,6 +57,9 @@ class KardexMovimiento(models.Model):
 
 
 class KardexDetalle(models.Model):
+    EMPRESA_LOOKUP = 'movimiento__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     movimiento = models.ForeignKey(
         KardexMovimiento,
         on_delete=models.CASCADE,

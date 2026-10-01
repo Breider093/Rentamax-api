@@ -1,18 +1,19 @@
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class Transportador(models.Model):
+class Transportador(EmpresaModel):
     class Estado(models.TextChoices):
         ACTIVO = 'ACTIVO', 'Activo'
         INACTIVO = 'INACTIVO', 'Inactivo'
 
-    codigo = models.CharField(max_length=20, unique=True, blank=True)
+    codigo = models.CharField(max_length=20, blank=True)
     nombre = models.CharField(max_length=150)
-    documento = models.CharField(max_length=30, unique=True)
+    documento = models.CharField(max_length=30)
     telefono = models.CharField(max_length=30, blank=True)
     email = models.EmailField(max_length=150, blank=True)
-    licencia_numero = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    licencia_numero = models.CharField(max_length=50, null=True, blank=True)
     licencia_categoria = models.CharField(max_length=20, blank=True)
     licencia_vencimiento = models.DateField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.ACTIVO)
@@ -27,6 +28,11 @@ class Transportador(models.Model):
             models.Index(fields=['estado'], name='transportador_estado_idx'),
             models.Index(fields=['nombre'], name='transportador_nombre_idx'),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'codigo'], name='transportador_empresa_cod_uq'),
+            models.UniqueConstraint(fields=['empresa', 'documento'], name='transportador_empresa_doc_uq'),
+            models.UniqueConstraint(fields=['empresa', 'licencia_numero'], name='transp_empresa_lic_uq'),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -39,7 +45,7 @@ class Transportador(models.Model):
         return f'{self.codigo} - {self.nombre}'
 
 
-class Vehiculo(models.Model):
+class Vehiculo(EmpresaModel):
     class Tipo(models.TextChoices):
         CAMION = 'CAMION', 'Camión'
         FURGON = 'FURGON', 'Furgón'
@@ -50,7 +56,7 @@ class Vehiculo(models.Model):
         INACTIVO = 'INACTIVO', 'Inactivo'
         MANTENIMIENTO = 'MANTENIMIENTO', 'Mantenimiento'
 
-    placa = models.CharField(max_length=15, unique=True)
+    placa = models.CharField(max_length=15)
     tipo = models.CharField(max_length=30, choices=Tipo.choices)
     marca = models.CharField(max_length=80, blank=True)
     modelo = models.CharField(max_length=80, blank=True)
@@ -61,12 +67,18 @@ class Vehiculo(models.Model):
     class Meta:
         db_table = 'vehiculos'
         ordering = ['placa']
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'placa'], name='vehiculo_empresa_placa_uq'),
+        ]
 
     def __str__(self):
         return f'{self.placa} - {self.get_tipo_display()}'
 
 
 class TransportadorVehiculo(models.Model):
+    EMPRESA_LOOKUP = 'transportador__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     transportador = models.ForeignKey(Transportador, on_delete=models.CASCADE, related_name='asignaciones_vehiculo')
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE, related_name='asignaciones_transportador')
     es_principal = models.BooleanField(default=False)
@@ -80,14 +92,14 @@ class TransportadorVehiculo(models.Model):
         ]
 
 
-class Viaje(models.Model):
+class Viaje(EmpresaModel):
     class Estado(models.TextChoices):
         PROGRAMADO = 'PROGRAMADO', 'Programado'
         EN_CURSO = 'EN_CURSO', 'En curso'
         COMPLETADO = 'COMPLETADO', 'Completado'
         CANCELADO = 'CANCELADO', 'Cancelado'
 
-    codigo = models.CharField(max_length=30, unique=True, blank=True)
+    codigo = models.CharField(max_length=30, blank=True)
     transportador = models.ForeignKey(Transportador, on_delete=models.PROTECT, related_name='viajes')
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.PROTECT, related_name='viajes', null=True, blank=True)
     origen = models.CharField(max_length=150, blank=True)
@@ -114,6 +126,9 @@ class Viaje(models.Model):
             models.Index(fields=['estado', 'fecha_salida'], name='viaje_estado_fecha_idx'),
             models.Index(fields=['destino'], name='viaje_destino_idx'),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'codigo'], name='viaje_empresa_codigo_uq'),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -122,6 +137,9 @@ class Viaje(models.Model):
 
 
 class ViajeRemision(models.Model):
+    EMPRESA_LOOKUP = 'viaje__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Estado(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente'
         CARGADA = 'CARGADA', 'Cargada'

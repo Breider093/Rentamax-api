@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Responsable
 
 
-class ResponsableSerializer(serializers.ModelSerializer):
+class ResponsableSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Responsable
         fields = '__all__'

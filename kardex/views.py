@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from clientes.models import Cliente
+from empresas.views import EmpresaQuerysetMixin
 
 from .models import KardexDetalle, KardexMovimiento
 from .serializers import KardexDetalleSerializer, KardexMovimientoSerializer
@@ -32,8 +33,8 @@ class KardexClienteView(APIView):
         if desde and hasta and desde > hasta:
             return Response({'detail': 'El rango de fechas no es válido.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        get_object_or_404(Cliente.objects.only('id'), pk=cliente_id)
-        queryset = KardexMovimiento.objects.filter(cliente_id=cliente_id).select_related('obra').prefetch_related(
+        get_object_or_404(Cliente.objects.de_empresa(request.empresa).only('id'), pk=cliente_id)
+        queryset = KardexMovimiento.objects.de_empresa(request.empresa).filter(cliente_id=cliente_id).select_related('obra').prefetch_related(
             'detalles__producto'
         ).order_by('fecha', 'id')
         obra = request.query_params.get('obra')
@@ -75,8 +76,10 @@ class KardexClienteView(APIView):
         })
 
 
-class KardexMovimientoViewSet(viewsets.ModelViewSet):
+class KardexMovimientoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
+    # The mixin scopes movements and details to the active company.
     serializer_class = KardexMovimientoSerializer
+    # Base movements are limited by the active tenant.
     queryset = KardexMovimiento.objects.select_related('cliente', 'obra', 'remision').prefetch_related(
         'detalles__producto'
     ).all()
@@ -106,6 +109,7 @@ class KardexMovimientoViewSet(viewsets.ModelViewSet):
                 {'detail': 'El parámetro cliente es obligatorio.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        get_object_or_404(Cliente.objects.de_empresa(request.empresa), pk=cliente)
 
         saldo = self.get_queryset().filter(cliente_id=cliente).aggregate(
             saldo=Coalesce(
@@ -137,6 +141,6 @@ class KardexMovimientoViewSet(viewsets.ModelViewSet):
         return Response({'cliente': int(cliente), 'saldo': saldo})
 
 
-class KardexDetalleViewSet(viewsets.ModelViewSet):
+class KardexDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = KardexDetalle.objects.select_related('movimiento', 'producto').all()
     serializer_class = KardexDetalleSerializer

@@ -1,23 +1,24 @@
 from rest_framework import serializers
 
+from empresas.serializers import EmpresaSerializerMixin
 from .models import Transportador, TransportadorVehiculo, Vehiculo, Viaje, ViajeRemision
 
 
-class TransportadorSerializer(serializers.ModelSerializer):
+class TransportadorSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Transportador
         fields = '__all__'
         read_only_fields = ['codigo', 'creado_en', 'actualizado_en']
 
 
-class VehiculoSerializer(serializers.ModelSerializer):
+class VehiculoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Vehiculo
         fields = '__all__'
         read_only_fields = ['creado_en']
 
 
-class TransportadorVehiculoSerializer(serializers.ModelSerializer):
+class TransportadorVehiculoSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = TransportadorVehiculo
         fields = '__all__'
@@ -39,7 +40,7 @@ class TransportadorVehiculoSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ViajeSerializer(serializers.ModelSerializer):
+class ViajeSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     remisiones = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     class Meta:
@@ -54,7 +55,9 @@ class ViajeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'transportador': 'El transportador no está activo.'})
         if vehiculo and vehiculo.estado != Vehiculo.Estado.ACTIVO:
             raise serializers.ValidationError({'vehiculo': 'El vehículo no está activo.'})
-        if transportador and vehiculo and not TransportadorVehiculo.objects.filter(
+        empresa = getattr(self.context.get('request'), 'empresa', None)
+        asignaciones = TransportadorVehiculo.objects.de_empresa(empresa)
+        if transportador and vehiculo and not asignaciones.filter(
             transportador=transportador,
             vehiculo=vehiculo,
             fecha_desasignacion__isnull=True,
@@ -65,7 +68,7 @@ class ViajeSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ViajeRemisionSerializer(serializers.ModelSerializer):
+class ViajeRemisionSerializer(EmpresaSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ViajeRemision
         fields = '__all__'

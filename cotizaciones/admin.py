@@ -11,7 +11,7 @@ class CotizacionDetalleInline(admin.TabularInline):
 @admin.register(Cotizacion)
 class CotizacionAdmin(admin.ModelAdmin):
 	list_display = ('numero', 'cliente', 'fecha_emision', 'fecha_vencimiento', 'estado', 'total')
-	list_filter = ('estado', 'fecha_emision', 'fecha_vencimiento')
+	list_filter = ('empresa', 'estado', 'fecha_emision', 'fecha_vencimiento')
 	search_fields = ('numero', 'cliente__razon_social', 'cliente__documento')
 	inlines = [CotizacionDetalleInline]
 
@@ -19,4 +19,5 @@ class CotizacionAdmin(admin.ModelAdmin):
 @admin.register(CotizacionDetalle)
 class CotizacionDetalleAdmin(admin.ModelAdmin):
 	list_display = ('cotizacion', 'producto', 'cantidad', 'precio_unitario', 'subtotal')
+	list_filter = ('cotizacion__empresa',)
 	search_fields = ('cotizacion__numero', 'producto__descripcion')

@@ -4,9 +4,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class Cotizacion(models.Model):
+class Cotizacion(EmpresaModel):
 	class Estado(models.TextChoices):
 		PENDIENTE = 'PENDIENTE', 'Pendiente'
 		APROBADA = 'APROBADA', 'Aprobada'
@@ -15,7 +16,7 @@ class Cotizacion(models.Model):
 		CANCELADA = 'CANCELADA', 'Cancelada'
 		CONVERTIDA = 'CONVERTIDA', 'Convertida'
 
-	numero = models.CharField(max_length=30, unique=True, blank=True)
+	numero = models.CharField(max_length=30, blank=True)
 	cliente = models.ForeignKey(
 		'clientes.Cliente', on_delete=models.PROTECT, related_name='cotizaciones'
 	)
@@ -46,6 +47,7 @@ class Cotizacion(models.Model):
 			models.Index(fields=['estado'], name='cotizacion_estado_idx'),
 		]
 		constraints = [
+			models.UniqueConstraint(fields=['empresa', 'numero'], name='cotizacion_empresa_num_uq'),
 			models.CheckConstraint(
 				condition=(
 					models.Q(fecha_vencimiento__isnull=True)
@@ -82,6 +84,9 @@ class Cotizacion(models.Model):
 
 
 class CotizacionDetalle(models.Model):
+	EMPRESA_LOOKUP = 'cotizacion__empresa'
+	objects = EmpresaQuerySet.as_manager()
+
 	cotizacion = models.ForeignKey(Cotizacion, on_delete=models.CASCADE, related_name='detalles')
 	producto = models.ForeignKey(
 		'productos.Producto', on_delete=models.PROTECT, related_name='detalles_cotizacion'

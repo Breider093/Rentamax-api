@@ -3,11 +3,12 @@ from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Devolucion, DevolucionDetalle
 from .serializers import DevolucionDetalleSerializer, DevolucionSerializer
 
 
-class DevolucionViewSet(viewsets.ModelViewSet):
+class DevolucionViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Devolucion.objects.select_related(
         'cliente', 'obra', 'transportador', 'factura', 'creado_por'
     ).prefetch_related('detalles__producto').all()
@@ -65,7 +66,7 @@ class DevolucionViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(devolucion).data)
 
 
-class DevolucionDetalleViewSet(viewsets.ModelViewSet):
+class DevolucionDetalleViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = DevolucionDetalle.objects.select_related('devolucion', 'producto').all()
     serializer_class = DevolucionDetalleSerializer
 

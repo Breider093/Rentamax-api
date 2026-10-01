@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from remisiones.models import Remision
@@ -9,7 +9,10 @@ from remisiones.models import Remision
 from .models import Viaje
 
 
-class TransportadoresApiTests(APITestCase):
+class TransportadoresApiTests(EmpresaAPITestCase):
+    def setUp(self):
+        super().setUp()
+
     def test_crea_asigna_y_completa_viaje(self):
         transportador_response = self.client.post(
             reverse('transportador-list'),
@@ -59,6 +62,7 @@ class TransportadoresApiTests(APITestCase):
         viaje_id = viaje_response.data['id']
 
         cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900123456-7',
             tipo_documento='NIT',
             razon_social='Constructora Ejemplo',
@@ -68,6 +72,7 @@ class TransportadoresApiTests(APITestCase):
             celular='3000000000',
         )
         remision = Remision.objects.create(
+            empresa=self.empresa,
             cliente=cliente,
             fecha_entrega_programada=date.today() + timedelta(days=1),
         )

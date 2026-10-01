@@ -13,18 +13,19 @@ class FacturaPagoInline(admin.TabularInline):
 @admin.register(Factura)
 class FacturaAdmin(admin.ModelAdmin):
     list_display = ('numero', 'cliente', 'remision', 'fecha_emision', 'estado', 'total', 'saldo_pendiente')
-    list_filter = ('estado', 'metodo_pago', 'fecha_emision')
+    list_filter = ('empresa', 'estado', 'metodo_pago', 'fecha_emision')
     search_fields = ('numero', 'cliente__razon_social', 'cliente__documento')
     inlines = [FacturaDetalleInline, FacturaPagoInline]
 
 @admin.register(FacturaDetalle)
 class FacturaDetalleAdmin(admin.ModelAdmin):
     list_display = ('factura', 'producto', 'cantidad', 'precio_unitario', 'subtotal')
+    list_filter = ('factura__empresa',)
     search_fields = ('factura__numero', 'producto__descripcion')
 
 @admin.register(FacturaPago)
 class FacturaPagoAdmin(admin.ModelAdmin):
     list_display = ('factura', 'metodo_pago', 'monto', 'fecha_pago', 'referencia')
-    list_filter = ('metodo_pago', 'fecha_pago')
+    list_filter = ('factura__empresa', 'metodo_pago', 'fecha_pago')
     search_fields = ('factura__numero', 'referencia')
 

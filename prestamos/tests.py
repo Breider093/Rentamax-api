@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from obras.models import Obra
@@ -11,9 +11,11 @@ from productos.models import Producto, TipoProducto
 from .models import Prestamo, PrestamoDetalle
 
 
-class PrestamoApiTests(APITestCase):
+class PrestamoApiTests(EmpresaAPITestCase):
     def setUp(self):
+        super().setUp()
         self.cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900123456-7',
             tipo_documento='NIT',
             razon_social='Constructora Ejemplo S.A.S.',
@@ -27,12 +29,17 @@ class PrestamoApiTests(APITestCase):
             nombre='Obra principal',
             direccion='Calle 1 # 2-3',
         )
-        tipo, _ = TipoProducto.objects.get_or_create(nombre='Andamios')
+        tipo, _ = TipoProducto.objects.get_or_create(
+            empresa=self.empresa,
+            nombre='Andamios',
+        )
         self.producto = Producto.objects.create(
+            empresa=self.empresa,
             descripcion='Andamio para préstamo',
             tipo_producto=tipo,
         )
         self.prestamo = Prestamo.objects.create(
+            empresa=self.empresa,
             cliente=self.cliente,
             obra=self.obra,
             fecha_reserva=date(2026, 9, 7),
@@ -68,6 +75,7 @@ class PrestamoApiTests(APITestCase):
 
     def test_rechaza_obra_de_otro_cliente(self):
         otro_cliente = Cliente.objects.create(
+            empresa=self.empresa,
             documento='900765432-1',
             tipo_documento='NIT',
             razon_social='Otra empresa',

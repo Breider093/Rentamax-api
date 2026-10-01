@@ -1,10 +1,8 @@
-from django.test import TestCase
-
 from datetime import date, timedelta
 from decimal import Decimal
 
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from empresas.testing import EmpresaAPITestCase
 
 from clientes.models import Cliente
 from productos.models import Producto, TipoProducto
@@ -13,10 +11,12 @@ from facturas.models import Factura
 from .models import Cotizacion
 
 
-class CotizacionFlowTests(APITestCase):
+class CotizacionFlowTests(EmpresaAPITestCase):
 	def setUp(self):
-		tipo = TipoProducto.objects.create(nombre='Material')
+		super().setUp()
+		tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Material')
 		self.cliente = Cliente.objects.create(
+			empresa=self.empresa,
 			documento='CC-100',
 			tipo_documento='CC',
 			razon_social='Cliente Uno',
@@ -26,6 +26,7 @@ class CotizacionFlowTests(APITestCase):
 			celular='3000000000',
 		)
 		self.producto = Producto.objects.create(
+			empresa=self.empresa,
 			descripcion='Producto Uno',
 			tipo_producto=tipo,
 		)

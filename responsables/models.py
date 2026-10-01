@@ -1,12 +1,13 @@
 from django.db import models
+from empresas.models import EmpresaModel
 
 
-class Responsable(models.Model):
+class Responsable(EmpresaModel):
     class Estado(models.TextChoices):
         ACTIVO = 'ACTIVO', 'Activo'
         INACTIVO = 'INACTIVO', 'Inactivo'
 
-    documento = models.CharField(max_length=27, unique=True)
+    documento = models.CharField(max_length=27)
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     direccion = models.CharField(max_length=150, blank=True)
@@ -22,6 +23,9 @@ class Responsable(models.Model):
         indexes = [
             models.Index(fields=['estado'], name='responsable_estado_idx'),
             models.Index(fields=['apellido', 'nombre'], name='responsable_nombre_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['empresa', 'documento'], name='responsable_empresa_doc_uq'),
         ]
 
     def __str__(self):

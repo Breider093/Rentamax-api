@@ -3,9 +3,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from empresas.models import EmpresaModel, EmpresaQuerySet
 
 
-class Devolucion(models.Model):
+class Devolucion(EmpresaModel):
     class Estado(models.TextChoices):
         PENDIENTE = 'PENDIENTE', 'Pendiente'
         PROCESADA = 'PROCESADA', 'Procesada'
@@ -18,7 +19,7 @@ class Devolucion(models.Model):
         GENERADA = 'GENERADA', 'Generada'
         VENCIDA = 'VENCIDA', 'Vencida'
 
-    numero = models.CharField(max_length=30, unique=True, blank=True)
+    numero = models.CharField(max_length=30, blank=True)
     cliente = models.ForeignKey(
         'clientes.Cliente', on_delete=models.PROTECT, related_name='devoluciones'
     )
@@ -56,6 +57,7 @@ class Devolucion(models.Model):
             models.Index(fields=['estado_factura'], name='devolucion_factura_estado_idx'),
         ]
         constraints = [
+            models.UniqueConstraint(fields=['empresa', 'numero'], name='devolucion_empresa_num_uq'),
             models.CheckConstraint(
                 condition=models.Q(precio_transporte__gte=0),
                 name='devolucion_transporte_no_negativo',
@@ -74,6 +76,9 @@ class Devolucion(models.Model):
 
 
 class DevolucionDetalle(models.Model):
+    EMPRESA_LOOKUP = 'devolucion__empresa'
+    objects = EmpresaQuerySet.as_manager()
+
     class Motivo(models.TextChoices):
         DEFECTUOSO = 'DEFECTUOSO', 'Defectuoso'
         EXCESO_PEDIDO = 'EXCESO_PEDIDO', 'Exceso de pedido'

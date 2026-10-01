@@ -1,4 +1,5 @@
 from io import BytesIO
+from pathlib import Path
 from xml.sax.saxutils import escape
 
 from django.http import FileResponse
@@ -9,7 +10,9 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 
+from empresas.views import EmpresaQuerysetMixin
 from .models import Producto, ProductoProveedor, Proveedor, TipoProducto
 from .serializers import (
     ProductoProveedorSerializer,
@@ -19,14 +22,41 @@ from .serializers import (
 )
 
 
-class TipoProductoViewSet(viewsets.ModelViewSet):
+class TipoProductoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
+    # The mixin applies the active company to this queryset.
     queryset = TipoProducto.objects.all()
     serializer_class = TipoProductoSerializer
 
 
-class ProductoViewSet(viewsets.ModelViewSet):
+class ProductoViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Producto.objects.all()
     serializer_class = ProductoSerializer
+
+    def _descargar_archivo(self, producto, field_name):
+        archivo = getattr(producto, field_name)
+        if not archivo:
+            raise NotFound('El producto no tiene ese archivo disponible.')
+        response = FileResponse(
+            archivo.open('rb'),
+            as_attachment=True,
+            filename=Path(archivo.name).name,
+        )
+        response['Cache-Control'] = 'private, no-store'
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
+
+    @action(detail=True, methods=['get'], url_path='manual', url_name='manual')
+    def descargar_manual(self, request, pk=None):
+        return self._descargar_archivo(self.get_object(), 'manual')
+
+    @action(
+        detail=True,
+        methods=['get'],
+        url_path='ficha-tecnica',
+        url_name='ficha-tecnica',
+    )
+    def descargar_ficha_tecnica(self, request, pk=None):
+        return self._descargar_archivo(self.get_object(), 'ficha_tecnica')
 
     @action(detail=False, methods=['get'], url_path='exportar-pdf')
     def exportar_pdf(self, request):
@@ -80,11 +110,11 @@ class ProductoViewSet(viewsets.ModelViewSet):
         )
 
 
-class ProveedorViewSet(viewsets.ModelViewSet):
+class ProveedorViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
 
 
-class ProductoProveedorViewSet(viewsets.ModelViewSet):
+class ProductoProveedorViewSet(EmpresaQuerysetMixin, viewsets.ModelViewSet):
     queryset = ProductoProveedor.objects.select_related('producto', 'proveedor')
     serializer_class = ProductoProveedorSerializer
